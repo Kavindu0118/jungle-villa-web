@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { signInWithGoogle } from './lib/firebase';
-import { getUserProfile, saveUserProfile } from './lib/menuStorage';
+import { getUserProfile, saveUserProfile, saveRestaurantProfile } from './lib/menuStorage';
 
 export default function LoginModal({ user, onComplete }) {
   const [profile, setProfile] = useState(null);
@@ -33,6 +33,12 @@ export default function LoginModal({ user, onComplete }) {
  setLoading(true);
     const profileData = { restaurantName, ownerName, email: user.email };
     await saveUserProfile(user.uid, profileData);
+    await saveRestaurantProfile(user.uid, {
+      restaurantName,
+      ownerName,
+      email: user.email,
+      allowOnlineOrders: false,
+    });
     setProfile(profileData);
     onComplete(profileData);
   };

@@ -5,10 +5,28 @@ import { auth, signInWithGoogle, logoutUser } from './lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import QRCode from 'qrcode'
 import { cloneTemplate, findTemplateById, menuTemplates } from './data/menuTemplates'
-import { saveMenuRecord, getMenuRecord, getUserMenus } from './lib/menuStorage'
+import {
+  saveMenuRecord,
+  getMenuRecord,
+  getUserMenus,
+  getRestaurantSettings,
+  saveRestaurantSettings,
+  createRestaurantOrder,
+  subscribeToRestaurantOrder,
+} from './lib/menuStorage'
 
 const createId = (prefix = 'id') =>
   `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`
+
+const getDeviceId = () => {
+  if (typeof window === 'undefined') return createId('device')
+  const storageKey = 'qr-device-id'
+  const existing = window.localStorage.getItem(storageKey)
+  if (existing) return existing
+  const next = createId('device')
+  window.localStorage.setItem(storageKey, next)
+  return next
+}
 
 const createEmptyItem = () => ({
   id: createId('item'),
@@ -23,10 +41,12 @@ const createEmptySection = () => ({
   items: [createEmptyItem()],
 })
 
-function TemplateMenuPreview({ menu }) {
+function TemplateMenuPreview({ menu, orderingEnabled = false, onAddToCart }) {
   if (!menu) {
     return null
   }
+
+  const canOrder = orderingEnabled && typeof onAddToCart === 'function'
 
   if (menu.templateId === 'chef-signature') {
     return (
@@ -48,7 +68,18 @@ function TemplateMenuPreview({ menu }) {
                   <div key={item.id} className="border-b border-neutral-200 pb-2 last:border-none last:pb-0">
                     <div className="flex items-start justify-between gap-3">
                       <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
-                      <p className="font-mono text-sm text-neutral-800">{item.price || '-'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-mono text-sm text-neutral-800">{item.price || '-'}</p>
+                        {canOrder && (
+                          <button
+                            type="button"
+                            onClick={() => onAddToCart(item)}
+                            className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900"
+                          >
+                            Add
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-sm text-neutral-600">{item.description || 'No description'}</p>
                   </div>
@@ -77,7 +108,18 @@ function TemplateMenuPreview({ menu }) {
                   <div key={item.id} className="rounded-lg border border-neutral-200 bg-white p-2">
                     <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
                     <p className="text-xs text-neutral-600">{item.description || 'No description'}</p>
-                    <p className="mt-1 font-mono text-xs text-neutral-800">{item.price || '-'}</p>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <p className="font-mono text-xs text-neutral-800">{item.price || '-'}</p>
+                      {canOrder && (
+                        <button
+                          type="button"
+                          onClick={() => onAddToCart(item)}
+                          className="rounded-full border border-neutral-300 px-2.5 py-1 text-[0.7rem] font-medium text-neutral-800 transition hover:border-neutral-900"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -109,7 +151,18 @@ function TemplateMenuPreview({ menu }) {
                     <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
                     <p className="text-neutral-600">{item.description || 'No description'}</p>
                   </div>
-                  <p className="font-mono text-neutral-800">{item.price || '-'}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-mono text-neutral-800">{item.price || '-'}</p>
+                    {canOrder && (
+                      <button
+                        type="button"
+                        onClick={() => onAddToCart(item)}
+                        className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900"
+                      >
+                        Add
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -131,6 +184,9 @@ function Editor() {
   const [saveStatus, setSaveStatus] = useState('Choose a template to begin.')
   const [isSaving, setIsSaving] = useState(false)
   const [qrPreview, setQrPreview] = useState(null)
+  const [restaurantSettings, setRestaurantSettings] = useState(null)
+  const [isRestaurantLoading, setIsRestaurantLoading] = useState(false)
+  const [isRestaurantUpdating, setIsRestaurantUpdating] = useState(false)
 
   useEffect(() => {
     if (auth) {
@@ -191,6 +247,60 @@ function Editor() {
       isActive = false
     }
   }, [user])
+
+  useEffect(() => {
+    let isActive = true
+
+    const loadRestaurantSettings = async () => {
+      if (!user?.uid) {
+        setRestaurantSettings(null)
+        setIsRestaurantLoading(false)
+        return
+      }
+
+      setIsRestaurantLoading(true)
+      const settings = await getRestaurantSettings(user.uid)
+
+      if (!isActive) return
+
+      if (settings) {
+        setRestaurantSettings(settings)
+      } else {
+        const defaults = {
+          restaurantName: profile?.restaurantName || '',
+          ownerName: profile?.ownerName || '',
+          allowOnlineOrders: false,
+        }
+        setRestaurantSettings(defaults)
+        await saveRestaurantSettings(user.uid, defaults)
+      }
+
+      setIsRestaurantLoading(false)
+    }
+
+    loadRestaurantSettings()
+
+    return () => {
+      isActive = false
+    }
+  }, [user, profile])
+
+  const handleToggleOnlineOrders = async () => {
+    if (!user?.uid || !restaurantSettings) return
+
+    const nextValue = !restaurantSettings.allowOnlineOrders
+    setRestaurantSettings((current) => ({
+      ...current,
+      allowOnlineOrders: nextValue,
+    }))
+
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(user.uid, {
+      ...restaurantSettings,
+      allowOnlineOrders: nextValue,
+    })
+    setIsRestaurantUpdating(false)
+  }
 
   const selectedTemplate = useMemo(
     () => findTemplateById(selectedTemplateId),
@@ -555,6 +665,31 @@ function Editor() {
               <p className="font-medium text-neutral-900">Status</p>
               <p className="mt-2">{saveStatus}</p>
             </div>
+
+            {user && (
+              <div className="mt-4 rounded-2xl border border-neutral-300 bg-white p-4 text-sm text-neutral-600">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-neutral-900">Online orders</p>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Allow customers to place orders from your QR menu.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleOnlineOrders}
+                    disabled={isRestaurantLoading || isRestaurantUpdating || !restaurantSettings}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                      restaurantSettings?.allowOnlineOrders
+                        ? 'border-emerald-500 bg-emerald-500 text-white'
+                        : 'border-neutral-300 bg-white text-neutral-700 hover:border-neutral-900'
+                    }`}
+                  >
+                    {restaurantSettings?.allowOnlineOrders ? 'Enabled' : 'Disabled'}
+                  </button>
+                </div>
+              </div>
+            )}
           </aside>
 
           <div className="rounded-3xl border border-neutral-300 bg-white p-5 sm:p-6">
@@ -860,6 +995,16 @@ function MenuViewer() {
   const { id } = useParams();
   const [menuData, setMenuData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [restaurantSettings, setRestaurantSettings] = useState(null);
+  const [cartItems, setCartItems] = useState([]);
+  const [customerName, setCustomerName] = useState('');
+  const [activeOrderId, setActiveOrderId] = useState(null);
+  const [orderData, setOrderData] = useState(null);
+  const [orderError, setOrderError] = useState('');
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [deviceId] = useState(() => getDeviceId());
+
+  const orderStorageKey = id ? `qr-order-${id}` : null
 
   useEffect(() => {
     async function load() {
@@ -872,6 +1017,145 @@ function MenuViewer() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    let isActive = true
+
+    const loadRestaurantSettings = async () => {
+      if (!menuData?.ownerId) return
+      const settings = await getRestaurantSettings(menuData.ownerId)
+      if (!isActive) return
+      setRestaurantSettings(settings || { allowOnlineOrders: false })
+    }
+
+    loadRestaurantSettings()
+
+    return () => {
+      isActive = false
+    }
+  }, [menuData])
+
+  useEffect(() => {
+    if (!orderStorageKey || !menuData?.ownerId) return
+
+    const stored = window.localStorage.getItem(orderStorageKey)
+    if (!stored) {
+      setActiveOrderId(null)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(stored)
+      if (parsed?.restaurantId === menuData.ownerId && parsed?.orderId) {
+        setActiveOrderId(parsed.orderId)
+      }
+    } catch {
+      setActiveOrderId(null)
+    }
+  }, [orderStorageKey, menuData])
+
+  useEffect(() => {
+    if (!menuData?.ownerId || !activeOrderId) {
+      setOrderData(null)
+      return
+    }
+
+    const unsubscribe = subscribeToRestaurantOrder(menuData.ownerId, activeOrderId, (order) => {
+      setOrderData(order)
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [menuData, activeOrderId])
+
+  const allowOnlineOrders = Boolean(restaurantSettings?.allowOnlineOrders)
+  const orderStatus = orderData?.status || null
+  const hasActiveOrder = Boolean(activeOrderId && orderStatus !== 'delivered')
+
+  const addToCart = (item) => {
+    if (hasActiveOrder) return
+    setCartItems((current) => {
+      const existing = current.find((entry) => entry.itemId === item.id)
+      if (existing) {
+        return current.map((entry) =>
+          entry.itemId === item.id ? { ...entry, qty: entry.qty + 1 } : entry,
+        )
+      }
+
+      return [
+        ...current,
+        {
+          itemId: item.id,
+          name: item.name || 'Untitled Item',
+          price: item.price || '-',
+          qty: 1,
+        },
+      ]
+    })
+  }
+
+  const updateCartQty = (itemId, nextQty) => {
+    setCartItems((current) =>
+      current
+        .map((entry) => (entry.itemId === itemId ? { ...entry, qty: nextQty } : entry))
+        .filter((entry) => entry.qty > 0),
+    )
+  }
+
+  const placeOrder = async () => {
+    if (!menuData?.ownerId || !allowOnlineOrders) return
+    if (!customerName.trim()) {
+      setOrderError('Please add your name before placing the order.')
+      return
+    }
+    if (cartItems.length === 0) {
+      setOrderError('Add at least one item to the cart.')
+      return
+    }
+
+    setOrderError('')
+    setIsPlacingOrder(true)
+
+    const orderPayload = {
+      menuId: id,
+      menuTitle: menuData.menuTitle,
+      restaurantId: menuData.ownerId,
+      restaurantName: menuData.restaurantName || '',
+      deviceId,
+      customerName: customerName.trim(),
+      items: cartItems.map((entry) => ({
+        itemId: entry.itemId,
+        name: entry.name,
+        price: entry.price,
+        qty: entry.qty,
+      })),
+    }
+
+    const orderId = await createRestaurantOrder(menuData.ownerId, orderPayload)
+    if (orderId) {
+      if (orderStorageKey) {
+        window.localStorage.setItem(
+          orderStorageKey,
+          JSON.stringify({ orderId, restaurantId: menuData.ownerId }),
+        )
+      }
+      setActiveOrderId(orderId)
+      setCartItems([])
+    } else {
+      setOrderError('Unable to place order. Please try again.')
+    }
+
+    setIsPlacingOrder(false)
+  }
+
+  const clearOrder = () => {
+    if (orderStorageKey) {
+      window.localStorage.removeItem(orderStorageKey)
+    }
+    setActiveOrderId(null)
+    setOrderData(null)
+  }
+
   if (loading) {
     return <div className="p-10 text-center text-neutral-600">Loading menu...</div>;
   }
@@ -882,8 +1166,129 @@ function MenuViewer() {
 
   return (
     <div className="min-h-screen bg-neutral-100 py-10 px-4">
-      <div className="mx-auto max-w-3xl">
-        <TemplateMenuPreview menu={menuData} />
+      <div className="mx-auto flex max-w-4xl flex-col gap-6">
+        <TemplateMenuPreview
+          menu={menuData}
+          orderingEnabled={allowOnlineOrders && !hasActiveOrder}
+          onAddToCart={addToCart}
+        />
+
+        <div className="rounded-2xl border border-neutral-300 bg-white p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-500">Order</p>
+              <h3 className="mt-2 text-xl font-semibold text-neutral-900">Your cart</h3>
+            </div>
+            {orderStatus && (
+              <span
+                className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                  orderStatus === 'delivered'
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                    : orderStatus === 'preparing'
+                    ? 'border-amber-500 bg-amber-500 text-white'
+                    : 'border-blue-500 bg-blue-500 text-white'
+                }`}
+              >
+                {orderStatus === 'preparing'
+                  ? 'Preparing'
+                  : orderStatus === 'delivered'
+                  ? 'Delivered'
+                  : 'Pending'}
+              </span>
+            )}
+          </div>
+
+          {!allowOnlineOrders && (
+            <p className="mt-4 text-sm text-neutral-600">
+              This restaurant is not accepting online orders at the moment.
+            </p>
+          )}
+
+          {allowOnlineOrders && hasActiveOrder && orderStatus !== 'delivered' && (
+            <p className="mt-4 text-sm text-neutral-600">
+              Your order has been placed. Status updates will appear here automatically.
+            </p>
+          )}
+
+          {allowOnlineOrders && orderStatus === 'delivered' && (
+            <div className="mt-4 flex items-center justify-between gap-3 text-sm text-neutral-600">
+              <p>Your order was delivered. You can start a new order anytime.</p>
+              <button
+                type="button"
+                onClick={clearOrder}
+                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-neutral-900"
+              >
+                Start new order
+              </button>
+            </div>
+          )}
+
+          {allowOnlineOrders && !hasActiveOrder && (
+            <div className="mt-4 space-y-4">
+              <label className="text-sm text-neutral-600">
+                <span className="mb-2 block font-medium text-neutral-900">Your name</span>
+                <input
+                  value={customerName}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-neutral-900"
+                  placeholder="Enter your name"
+                />
+              </label>
+
+              {cartItems.length === 0 && (
+                <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm text-neutral-600">
+                  Your cart is empty. Add items from the menu above.
+                </div>
+              )}
+
+              {cartItems.length > 0 && (
+                <div className="space-y-3">
+                  {cartItems.map((entry) => (
+                    <div
+                      key={entry.itemId}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm"
+                    >
+                      <div>
+                        <p className="font-medium text-neutral-900">{entry.name}</p>
+                        <p className="text-xs text-neutral-500">{entry.price}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateCartQty(entry.itemId, entry.qty - 1)}
+                          className="rounded-full border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-700"
+                        >
+                          -
+                        </button>
+                        <span className="w-6 text-center text-sm font-medium text-neutral-800">
+                          {entry.qty}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateCartQty(entry.itemId, entry.qty + 1)}
+                          className="rounded-full border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-700"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {orderError && <p className="text-sm text-red-600">{orderError}</p>}
+
+              <button
+                type="button"
+                onClick={placeOrder}
+                disabled={isPlacingOrder}
+                className="w-full rounded-xl bg-neutral-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-black disabled:cursor-not-allowed disabled:bg-neutral-400"
+              >
+                {isPlacingOrder ? 'Placing order...' : 'Place order'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
