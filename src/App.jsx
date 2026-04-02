@@ -1069,8 +1069,11 @@ function MenuViewer() {
   }, [menuData, activeOrderId])
 
   const allowOnlineOrders = Boolean(restaurantSettings?.allowOnlineOrders)
-  const orderStatus = orderData?.status || null
-  const hasActiveOrder = Boolean(activeOrderId && orderStatus !== 'delivered')
+  const rawOrderStatus = (orderData?.status || '').trim().toLowerCase()
+  const orderStatus = ['complete', 'completed', 'delivered'].includes(rawOrderStatus)
+    ? 'completed'
+    : rawOrderStatus || null
+  const hasActiveOrder = Boolean(activeOrderId && orderStatus !== 'completed')
 
   const addToCart = (item) => {
     if (hasActiveOrder) return
@@ -1182,17 +1185,21 @@ function MenuViewer() {
             {orderStatus && (
               <span
                 className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                  orderStatus === 'delivered'
+                  orderStatus === 'completed'
                     ? 'border-emerald-500 bg-emerald-500 text-white'
                     : orderStatus === 'preparing'
                     ? 'border-amber-500 bg-amber-500 text-white'
+                    : orderStatus === 'confirmed'
+                    ? 'border-cyan-500 bg-cyan-500 text-white'
                     : 'border-blue-500 bg-blue-500 text-white'
                 }`}
               >
-                {orderStatus === 'preparing'
+                {orderStatus === 'confirmed'
+                  ? 'Confirmed'
+                  : orderStatus === 'preparing'
                   ? 'Preparing'
-                  : orderStatus === 'delivered'
-                  ? 'Delivered'
+                  : orderStatus === 'completed'
+                  ? 'Completed'
                   : 'Pending'}
               </span>
             )}
@@ -1204,15 +1211,15 @@ function MenuViewer() {
             </p>
           )}
 
-          {allowOnlineOrders && hasActiveOrder && orderStatus !== 'delivered' && (
+          {allowOnlineOrders && hasActiveOrder && orderStatus !== 'completed' && (
             <p className="mt-4 text-sm text-neutral-600">
               Your order has been placed. Status updates will appear here automatically.
             </p>
           )}
 
-          {allowOnlineOrders && orderStatus === 'delivered' && (
+          {allowOnlineOrders && orderStatus === 'completed' && (
             <div className="mt-4 flex items-center justify-between gap-3 text-sm text-neutral-600">
-              <p>Your order was delivered. You can start a new order anytime.</p>
+              <p>Your order is completed. You can start a new order anytime.</p>
               <button
                 type="button"
                 onClick={clearOrder}
