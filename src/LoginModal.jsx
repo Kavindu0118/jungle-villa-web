@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { signInWithGoogle } from './lib/firebase';
-import { getUserProfile, saveUserProfile, saveRestaurantProfile } from './lib/menuStorage';
+import { getUserProfile, createRestaurantForUser } from './lib/menuStorage';
 
 export default function LoginModal({ user, onComplete }) {
   const [profile, setProfile] = useState(null);
@@ -14,12 +14,15 @@ export default function LoginModal({ user, onComplete }) {
     async function checkProfile() {
       if (user) {
         const data = await getUserProfile(user.uid);
-        if (data) {
+        if (data?.restaurantId) {
           setProfile(data);
+          setIsOnboarding(false);
           onComplete(data);
         } else {
           setIsOnboarding(true);
         }
+      } else {
+        setIsOnboarding(false);
       }
       setLoading(false);
     }
@@ -29,18 +32,20 @@ export default function LoginModal({ user, onComplete }) {
   const handleCreateProfile = async (e) => {
     e.preventDefault();
     if (!restaurantName.trim() || !ownerName.trim()) return;
-    
- setLoading(true);
+
+    setLoading(true);
     const profileData = { restaurantName, ownerName, email: user.email };
-    await saveUserProfile(user.uid, profileData);
-    await saveRestaurantProfile(user.uid, {
-      restaurantName,
-      ownerName,
-      email: user.email,
-      allowOnlineOrders: false,
-    });
-    setProfile(profileData);
-    onComplete(profileData);
+    const createdProfile = await createRestaurantForUser(user.uid, profileData);
+
+    if (!createdProfile) {
+      setLoading(false);
+      return;
+    }
+
+    setProfile(createdProfile);
+    setIsOnboarding(false);
+    setLoading(false);
+    onComplete(createdProfile);
   };
 
   if (!user && !loading) {

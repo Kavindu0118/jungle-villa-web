@@ -8,7 +8,7 @@ import { cloneTemplate, findTemplateById, menuTemplates } from './data/menuTempl
 import {
   saveMenuRecord,
   getMenuRecord,
-  getUserMenus,
+  getRestaurantMenu,
   getRestaurantSettings,
   saveRestaurantSettings,
   createRestaurantOrder,
@@ -176,7 +176,6 @@ function TemplateMenuPreview({ menu, orderingEnabled = false, onAddToCart }) {
 function Editor() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
-  const hasProfile = Boolean(profile);
   // profile state is used to stop showing the onboarding modal once completed
   const [selectedTemplateId, setSelectedTemplateId] = useState(null)
   const [draftMenu, setDraftMenu] = useState(null)
@@ -187,6 +186,7 @@ function Editor() {
   const [restaurantSettings, setRestaurantSettings] = useState(null)
   const [isRestaurantLoading, setIsRestaurantLoading] = useState(false)
   const [isRestaurantUpdating, setIsRestaurantUpdating] = useState(false)
+  const restaurantId = profile?.restaurantId || null
 
   useEffect(() => {
     if (auth) {
@@ -198,12 +198,13 @@ function Editor() {
     let isActive = true
 
     const loadMenus = async () => {
-      if (!user?.uid) {
+      if (!restaurantId) {
         setSavedMenus([])
         return
       }
 
-      const menus = await getUserMenus(user.uid)
+      const menu = await getRestaurantMenu(restaurantId)
+      const menus = menu ? [menu] : []
       const menusWithQr = await Promise.all(
         menus.map(async (menu) => {
           const slug = menu.slug || menu.id
@@ -246,20 +247,20 @@ function Editor() {
     return () => {
       isActive = false
     }
-  }, [user])
+  }, [restaurantId])
 
   useEffect(() => {
     let isActive = true
 
     const loadRestaurantSettings = async () => {
-      if (!user?.uid) {
+      if (!restaurantId) {
         setRestaurantSettings(null)
         setIsRestaurantLoading(false)
         return
       }
 
       setIsRestaurantLoading(true)
-      const settings = await getRestaurantSettings(user.uid)
+      const settings = await getRestaurantSettings(restaurantId)
 
       if (!isActive) return
 
@@ -267,12 +268,13 @@ function Editor() {
         setRestaurantSettings(settings)
       } else {
         const defaults = {
-          restaurantName: profile?.restaurantName || '',
-          ownerName: profile?.ownerName || '',
+          name: profile?.restaurantName || '',
+          slug: profile?.slug || '',
+          isActive: true,
           allowOnlineOrders: false,
         }
         setRestaurantSettings(defaults)
-        await saveRestaurantSettings(user.uid, defaults)
+        await saveRestaurantSettings(restaurantId, defaults)
       }
 
       setIsRestaurantLoading(false)
@@ -283,10 +285,10 @@ function Editor() {
     return () => {
       isActive = false
     }
-  }, [user, profile])
+  }, [restaurantId, profile])
 
   const handleToggleOnlineOrders = async () => {
-    if (!user?.uid || !restaurantSettings) return
+    if (!restaurantId || !restaurantSettings) return
 
     const nextValue = !restaurantSettings.allowOnlineOrders
     setRestaurantSettings((current) => ({
@@ -295,7 +297,7 @@ function Editor() {
     }))
 
     setIsRestaurantUpdating(true)
-    await saveRestaurantSettings(user.uid, {
+    await saveRestaurantSettings(restaurantId, {
       ...restaurantSettings,
       allowOnlineOrders: nextValue,
     })
@@ -306,6 +308,14 @@ function Editor() {
     () => findTemplateById(selectedTemplateId),
     [selectedTemplateId],
   )
+
+  const preferredRestaurantName = useMemo(() => {
+    return (
+      restaurantSettings?.name?.trim() ||
+      profile?.restaurantName?.trim() ||
+      ''
+    )
+  }, [restaurantSettings, profile])
 
   const draftItemCount = useMemo(() => {
     if (!draftMenu) {
@@ -329,7 +339,7 @@ function Editor() {
       id: createId('draft'),
       templateId: clonedTemplate.id,
       templateLabel: clonedTemplate.label,
-      restaurantName: clonedTemplate.restaurantName,
+      restaurantName: preferredRestaurantName || clonedTemplate.restaurantName,
       menuTitle: clonedTemplate.menuTitle,
       notes: '',
       sections: clonedTemplate.sections,
@@ -434,6 +444,11 @@ function Editor() {
       return
     }
 
+    if (!restaurantId) {
+      setSaveStatus('Complete onboarding first to create your restaurant.')
+      return
+    }
+
     if (!draftMenu.menuTitle.trim()) {
       setSaveStatus('Add a menu title before saving.')
       return
@@ -456,27 +471,16 @@ function Editor() {
     let remoteSaved = false
     let remoteId = null
 
-    /* 
-      According to instructions: "when menu created then those menu details must not save on firestore database. and when menu preview then it should asign their corresponding name to the url and those url link to the menu ui"
-      If we are doing previews without saving to firestore immediately, we need to encode the data in the URL (or skip remote saving here and ONLY generate local data URLs). But a URL cannot reliably hold an entire image payload unless it's very large, or it stores it locally.
-      Let's save it to firestore ONLY with the slug, or just store it locally. I will do what we built in menuStorage: generate a slug on save!
-    */
-
     try {
-      const generatedSlug = payload.restaurantName 
-        ? payload.restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Math.floor(Math.random() * 100)
-        : `menu-${Math.floor(Math.random() * 100000)}`;
-      
-      const remoteResult = await saveMenuRecord(payload, user?.uid, generatedSlug);
-      remoteSaved = remoteResult.remoteSaved;
-      remoteId = remoteResult.remoteId;
+      const remoteResult = await saveMenuRecord(payload, restaurantId)
+      remoteSaved = remoteResult.remoteSaved
+      remoteId = remoteResult.remoteId
     } catch {
-      remoteSaved = false;
-      remoteId = `menu-${Math.floor(Math.random() * 100000)}`; // local fallback
+      remoteSaved = false
+      remoteId = profile?.slug || restaurantId
     }
-    
-    // Assigning their corresponding name to the url
-    const targetUrl = `${window.location.origin}/menu/${remoteId}`;
+
+    const targetUrl = `${window.location.origin}/menu/${remoteId || restaurantId}`
 
     try {
       qrDataUrl = await QRCode.toDataURL(targetUrl, {
@@ -493,21 +497,20 @@ function Editor() {
       return
     }
 
-    setSavedMenus((currentMenus) => [
+    setSavedMenus([
       {
         localId: createId('menu'),
         ...payload,
         qrDataUrl,
         remoteSaved,
-        remoteId,
+        remoteId: remoteId || restaurantId,
         savedAt: new Date().toISOString(),
       },
-      ...currentMenus,
     ])
 
     setSaveStatus(
       remoteSaved
-        ? 'Menu saved locally and synced to Firestore.'
+        ? 'Menu published and synced to Firestore.'
         : 'Menu saved in My Menu. Add Firebase env values to sync with Firestore.',
     )
     setIsSaving(false)
@@ -876,13 +879,13 @@ function Editor() {
               <h3 className="mt-1 text-2xl font-semibold text-neutral-900">Saved menus</h3>
             </div>
             <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-500">
-              {savedMenus.length} records
+              {savedMenus.length} record
             </p>
           </div>
 
           {savedMenus.length === 0 && (
             <div className="rounded-2xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center text-neutral-600">
-              No saved menus yet. Build one and click Save Menu.
+              No published menu yet. Build one and click Save Menu.
             </div>
           )}
 
@@ -1021,8 +1024,8 @@ function MenuViewer() {
     let isActive = true
 
     const loadRestaurantSettings = async () => {
-      if (!menuData?.ownerId) return
-      const settings = await getRestaurantSettings(menuData.ownerId)
+      if (!menuData?.restaurantId) return
+      const settings = await getRestaurantSettings(menuData.restaurantId)
       if (!isActive) return
       setRestaurantSettings(settings || { allowOnlineOrders: false })
     }
@@ -1035,7 +1038,7 @@ function MenuViewer() {
   }, [menuData])
 
   useEffect(() => {
-    if (!orderStorageKey || !menuData?.ownerId) return
+    if (!orderStorageKey || !menuData?.restaurantId) return
 
     const stored = window.localStorage.getItem(orderStorageKey)
     if (!stored) {
@@ -1045,7 +1048,7 @@ function MenuViewer() {
 
     try {
       const parsed = JSON.parse(stored)
-      if (parsed?.restaurantId === menuData.ownerId && parsed?.orderId) {
+      if (parsed?.restaurantId === menuData.restaurantId && parsed?.orderId) {
         setActiveOrderId(parsed.orderId)
       }
     } catch {
@@ -1054,12 +1057,12 @@ function MenuViewer() {
   }, [orderStorageKey, menuData])
 
   useEffect(() => {
-    if (!menuData?.ownerId || !activeOrderId) {
+    if (!menuData?.restaurantId || !activeOrderId) {
       setOrderData(null)
       return
     }
 
-    const unsubscribe = subscribeToRestaurantOrder(menuData.ownerId, activeOrderId, (order) => {
+    const unsubscribe = subscribeToRestaurantOrder(menuData.restaurantId, activeOrderId, (order) => {
       setOrderData(order)
     })
 
@@ -1106,7 +1109,7 @@ function MenuViewer() {
   }
 
   const placeOrder = async () => {
-    if (!menuData?.ownerId || !allowOnlineOrders) return
+    if (!menuData?.restaurantId || !allowOnlineOrders) return
     if (!customerName.trim()) {
       setOrderError('Please add your name before placing the order.')
       return
@@ -1122,7 +1125,7 @@ function MenuViewer() {
     const orderPayload = {
       menuId: id,
       menuTitle: menuData.menuTitle,
-      restaurantId: menuData.ownerId,
+      restaurantId: menuData.restaurantId,
       restaurantName: menuData.restaurantName || '',
       deviceId,
       customerName: customerName.trim(),
@@ -1134,12 +1137,12 @@ function MenuViewer() {
       })),
     }
 
-    const orderId = await createRestaurantOrder(menuData.ownerId, orderPayload)
+    const orderId = await createRestaurantOrder(menuData.restaurantId, orderPayload)
     if (orderId) {
       if (orderStorageKey) {
         window.localStorage.setItem(
           orderStorageKey,
-          JSON.stringify({ orderId, restaurantId: menuData.ownerId }),
+          JSON.stringify({ orderId, restaurantId: menuData.restaurantId }),
         )
       }
       setActiveOrderId(orderId)
