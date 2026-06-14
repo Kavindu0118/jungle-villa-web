@@ -1016,6 +1016,19 @@ function Editor() {
 
 
 
+const parsePrice = (priceStr) => {
+  if (!priceStr) return 0
+  const sanitized = priceStr.replace(/[^\d.]/g, '')
+  const parsed = parseFloat(sanitized)
+  return isNaN(parsed) ? 0 : parsed
+}
+
+const getCurrencySymbol = (priceStr) => {
+  if (!priceStr) return '$'
+  const match = priceStr.trim().match(/^([^\d\s.]+)/)
+  return match ? match[1] : '$'
+}
+
 function MenuViewer() {
   const { id } = useParams();
   const [menuData, setMenuData] = useState(null);
@@ -1030,6 +1043,19 @@ function MenuViewer() {
   const [deviceId] = useState(() => getDeviceId());
 
   const orderStorageKey = id ? `qr-order-${id}` : null
+
+  const orderTotal = useMemo(() => {
+    if (!orderData?.items) return 0
+    return orderData.items.reduce((sum, entry) => {
+      const priceVal = parsePrice(entry.price)
+      return sum + priceVal * entry.qty
+    }, 0)
+  }, [orderData])
+
+  const orderCurrency = useMemo(() => {
+    if (!orderData?.items || orderData.items.length === 0) return '$'
+    return getCurrencySymbol(orderData.items[0].price)
+  }, [orderData])
 
   useEffect(() => {
     async function load() {
@@ -1205,7 +1231,9 @@ function MenuViewer() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-500">Order</p>
-              <h3 className="mt-2 text-xl font-semibold text-neutral-900">Your cart</h3>
+              <h3 className="mt-2 text-xl font-semibold text-neutral-900">
+                {orderStatus ? 'Your order' : 'Your cart'}
+              </h3>
             </div>
             {orderStatus && (
               <span
@@ -1237,21 +1265,97 @@ function MenuViewer() {
           )}
 
           {allowOnlineOrders && hasActiveOrder && orderStatus !== 'completed' && (
-            <p className="mt-4 text-sm text-neutral-600">
-              Your order has been placed. Status updates will appear here automatically.
-            </p>
+            <div className="mt-4 space-y-4">
+              <p className="text-sm text-neutral-600">
+                Your order has been placed. Status updates will appear here automatically.
+              </p>
+              {orderData?.items && orderData.items.length > 0 && (
+                <div className="border-t border-neutral-200 pt-4">
+                  <p className="font-mono text-[0.7rem] uppercase tracking-[0.15em] text-neutral-500 mb-3">
+                    Ordered Items
+                  </p>
+                  <div className="space-y-3">
+                    {orderData.items.map((entry) => {
+                      const priceVal = parsePrice(entry.price)
+                      const itemTotal = priceVal * entry.qty
+                      const currency = getCurrencySymbol(entry.price)
+                      return (
+                        <div
+                          key={entry.itemId}
+                          className="flex items-center justify-between gap-3 text-sm"
+                        >
+                          <div>
+                            <p className="font-medium text-neutral-900">{entry.name}</p>
+                            <p className="text-xs text-neutral-500">
+                              {entry.price} × {entry.qty}
+                            </p>
+                          </div>
+                          <p className="font-mono text-sm font-semibold text-neutral-900">
+                            {currency}{itemTotal.toFixed(2)}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-neutral-900">Total Amount</p>
+                    <p className="font-mono text-base font-bold text-neutral-900">
+                      {orderCurrency}{orderTotal.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {allowOnlineOrders && orderStatus === 'completed' && (
-            <div className="mt-4 flex items-center justify-between gap-3 text-sm text-neutral-600">
-              <p>Your order is completed. You can start a new order anytime.</p>
-              <button
-                type="button"
-                onClick={clearOrder}
-                className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-neutral-900"
-              >
-                Start new order
-              </button>
+            <div className="mt-4 space-y-4">
+              <div className="flex items-center justify-between gap-3 text-sm text-neutral-600">
+                <p>Your order is completed. You can start a new order anytime.</p>
+                <button
+                  type="button"
+                  onClick={clearOrder}
+                  className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-neutral-900"
+                >
+                  Start new order
+                </button>
+              </div>
+              {orderData?.items && orderData.items.length > 0 && (
+                <div className="border-t border-neutral-200 pt-4">
+                  <p className="font-mono text-[0.7rem] uppercase tracking-[0.15em] text-neutral-500 mb-3">
+                    Ordered Items Summary
+                  </p>
+                  <div className="space-y-3">
+                    {orderData.items.map((entry) => {
+                      const priceVal = parsePrice(entry.price)
+                      const itemTotal = priceVal * entry.qty
+                      const currency = getCurrencySymbol(entry.price)
+                      return (
+                        <div
+                          key={entry.itemId}
+                          className="flex items-center justify-between gap-3 text-sm"
+                        >
+                          <div>
+                            <p className="font-medium text-neutral-900">{entry.name}</p>
+                            <p className="text-xs text-neutral-500">
+                              {entry.price} × {entry.qty}
+                            </p>
+                          </div>
+                          <p className="font-mono text-sm font-semibold text-neutral-900">
+                            {currency}{itemTotal.toFixed(2)}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-neutral-900">Total Paid</p>
+                    <p className="font-mono text-base font-bold text-neutral-900">
+                      {orderCurrency}{orderTotal.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
