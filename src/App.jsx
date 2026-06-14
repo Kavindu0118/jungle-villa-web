@@ -539,6 +539,21 @@ function Editor() {
     window.open(`${window.location.origin}/menu/${slug}`, '_blank', 'noopener')
   }
 
+  const loadMenuForEditing = (menu) => {
+    setSelectedTemplateId(menu.templateId)
+    setDraftMenu({
+      id: menu.localId,
+      templateId: menu.templateId,
+      templateLabel: menu.templateLabel,
+      restaurantName: menu.restaurantName,
+      menuTitle: menu.menuTitle,
+      notes: menu.notes,
+      sections: menu.sections,
+      updatedAt: new Date().toISOString(),
+    })
+    setSaveStatus('Menu loaded for editing. Make your changes and save.')
+  }
+
   useEffect(() => {
     if (!qrPreview) {
       return undefined
@@ -935,6 +950,13 @@ function Editor() {
                       ))}
 
                       <div className="flex flex-wrap gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => loadMenuForEditing(menu)}
+                          className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-800 transition hover:border-neutral-900 hover:bg-neutral-50"
+                        >
+                          Edit
+                        </button>
                         <button
                           type="button"
                           onClick={() => openMenuPreview(menu)}
