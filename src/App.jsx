@@ -53,9 +53,15 @@ const createEmptySection = () => ({
 // Icons moved to components/Icons.jsx
 
 // ─── TemplateMenuPreview ──────────────────────────────────────────────────────
-function TemplateMenuPreview({ menu, orderingEnabled = false, onAddToCart }) {
+function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = false, onAddToCart }) {
   if (!menu) return null
   const canOrder = orderingEnabled && typeof onAddToCart === 'function'
+
+  const formatPrice = (price) => {
+    if (!price) return '-'
+    const cleanPrice = String(price).replace(/[^0-9.]/g, '')
+    return cleanPrice ? `${currencySymbol}${cleanPrice}` : '-'
+  }
 
   if (menu.templateId === 'chef-signature') {
     return (
@@ -75,7 +81,7 @@ function TemplateMenuPreview({ menu, orderingEnabled = false, onAddToCart }) {
                     <div className="flex items-start justify-between gap-3">
                       <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
                       <div className="flex items-center gap-2">
-                        <p className="font-mono text-sm text-neutral-800">{item.price || '-'}</p>
+                        <p className="font-mono text-sm text-neutral-800">{formatPrice(item.price)}</p>
                         {canOrder && (
                           <button type="button" onClick={() => onAddToCart(item)}
                             className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
@@ -109,7 +115,7 @@ function TemplateMenuPreview({ menu, orderingEnabled = false, onAddToCart }) {
                     <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
                     <p className="text-xs text-neutral-600">{item.description || 'No description'}</p>
                     <div className="mt-1 flex items-center justify-between gap-2">
-                      <p className="font-mono text-xs text-neutral-800">{item.price || '-'}</p>
+                      <p className="font-mono text-xs text-neutral-800">{formatPrice(item.price)}</p>
                       {canOrder && (
                         <button type="button" onClick={() => onAddToCart(item)}
                           className="rounded-full border border-neutral-300 px-2.5 py-1 text-[0.7rem] font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
@@ -144,7 +150,7 @@ function TemplateMenuPreview({ menu, orderingEnabled = false, onAddToCart }) {
                     <p className="text-neutral-600">{item.description || 'No description'}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <p className="font-mono text-neutral-800">{item.price || '-'}</p>
+                    <p className="font-mono text-neutral-800">{formatPrice(item.price)}</p>
                     {canOrder && (
                       <button type="button" onClick={() => onAddToCart(item)}
                         className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
@@ -615,7 +621,7 @@ function Editor() {
           {draftMenu && (
             <div>
               <p className="mb-3 text-sm font-semibold text-neutral-700">Live Preview</p>
-              <TemplateMenuPreview menu={draftMenu} />
+              <TemplateMenuPreview menu={draftMenu} currencySymbol={currencySymbol} />
             </div>
           )}
 
@@ -931,9 +937,12 @@ function MenuViewer() {
   if (loading) return <div className="p-10 text-center text-neutral-600">Loading menu…</div>
   if (!menuData) return <div className="p-10 text-center text-red-600">Menu not found or could not be loaded.</div>
 
+  const currencySymbol = restaurantSettings?.currency === 'LKR' ? 'Rs. ' : '$'
+
   const menuPreviewEl = (
     <TemplateMenuPreview
       menu={menuData}
+      currencySymbol={currencySymbol}
       orderingEnabled={allowOnlineOrders && !hasActiveOrder}
       onAddToCart={addToCart}
     />
