@@ -9,6 +9,7 @@ import {
   limit,
   serverTimestamp,
   onSnapshot,
+  deleteDoc,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from './firebase'
 
@@ -277,3 +278,16 @@ export const subscribeToRestaurantOrder = (restaurantId, orderId, onChange) => {
     onChange({ id: snap.id, ...snap.data() })
   })
 }
+
+export const cancelRestaurantOrder = async (restaurantId, orderId) => {
+  if (!isFirebaseConfigured || !db || !restaurantId || !orderId) return false
+  try {
+    const orderRef = doc(db, RESTAURANTS_COLLECTION, restaurantId, ORDERS_SUBCOLLECTION, orderId)
+    await deleteDoc(orderRef)
+    return true
+  } catch (error) {
+    console.error("Error cancelling order:", error)
+    return false
+  }
+}
+
