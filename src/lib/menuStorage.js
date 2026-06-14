@@ -291,3 +291,15 @@ export const cancelRestaurantOrder = async (restaurantId, orderId) => {
   }
 }
 
+export const deleteMenuRecord = async (restaurantId) => {
+  if (!isFirebaseConfigured || !db || !restaurantId) return false
+  try {
+    const menuRef = doc(db, RESTAURANTS_COLLECTION, restaurantId, MENU_SUBCOLLECTION, CURRENT_MENU_DOC)
+    await deleteDoc(menuRef)
+    return true
+  } catch (error) {
+    console.error("Error deleting menu:", error)
+    return false
+  }
+}
+
