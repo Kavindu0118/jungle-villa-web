@@ -114,13 +114,12 @@ export const saveMenuRecord = async (menuPayload, restaurantId, customSlug = nul
   const restaurantSnap = await getDoc(restaurantRef)
   const existingRestaurantData = restaurantSnap.exists() ? restaurantSnap.data() : null
 
-  const generatedSlug = menuPayload.restaurantName
-    ? slugify(menuPayload.restaurantName)
-    : `restaurant-${Math.floor(Math.random() * 100000)}`
+  const restaurantName = menuPayload.restaurantName?.trim() || existingRestaurantData?.name || 'Untitled Restaurant'
+  const generatedSlug = slugify(restaurantName)
   const finalSlug = customSlug || existingRestaurantData?.slug || generatedSlug
 
   await setDoc(restaurantRef, {
-    name: menuPayload.restaurantName?.trim() || existingRestaurantData?.name || 'Untitled Restaurant',
+    name: restaurantName,
     slug: finalSlug,
     allowOnlineOrders: existingRestaurantData?.allowOnlineOrders ?? false,
     isActive: existingRestaurantData?.isActive ?? true,
@@ -134,7 +133,7 @@ export const saveMenuRecord = async (menuPayload, restaurantId, customSlug = nul
     menuTitle: menuPayload.menuTitle,
     templateId: menuPayload.templateId,
     templateLabel: menuPayload.templateLabel,
-    restaurantName: menuPayload.restaurantName,
+    restaurantName: restaurantName,
     notes: menuPayload.notes,
     sections: menuPayload.sections,
     isPublished: true,
@@ -199,7 +198,6 @@ export const createRestaurantForUser = async (uid, profileData) => {
   await setDoc(doc(db, USERS_COLLECTION, uid), {
     ownerName,
     email,
-    restaurantName,
     restaurantId: restaurantRef.id,
     updatedAt: serverTimestamp(),
   }, { merge: true })
@@ -207,9 +205,7 @@ export const createRestaurantForUser = async (uid, profileData) => {
   return {
     ownerName,
     email,
-    restaurantName,
     restaurantId: restaurantRef.id,
-    slug: uniqueSlug,
   }
 }
 
