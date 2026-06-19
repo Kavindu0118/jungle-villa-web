@@ -224,7 +224,7 @@ function Editor() {
 
   }
   
-  //Service Fee Percentage
+  //HandleService Fee Percentage
   const handleServiceFeePercentageChange =
   async(value)=>{
 
