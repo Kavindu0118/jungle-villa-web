@@ -10,7 +10,7 @@ import MyMenuScreen from './components/screens/MyMenuScreen'
 import SettingsScreen from './components/screens/SettingsScreen'
 import ProfileScreen from './components/screens/ProfileScreen'
 import {
-  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX, IconStore
+  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX
 } from './components/Icons'
 import {
   saveMenuRecord,
@@ -18,6 +18,7 @@ import {
   getRestaurantMenu,
   getRestaurantSettings,
   saveRestaurantSettings,
+  saveUserProfile,
   createRestaurantOrder,
   subscribeToRestaurantOrder,
   cancelRestaurantOrder,
@@ -232,7 +233,7 @@ function Editor() {
       if (settings) {
         setRestaurantSettings(settings)
       } else {
-        const defaults = { name: profile?.restaurantName || '', slug: profile?.slug || '', isActive: true, allowOnlineOrders: false }
+        const defaults = { name: '', slug: '', isActive: true, allowOnlineOrders: false }
         setRestaurantSettings(defaults)
         await saveRestaurantSettings(restaurantId, defaults)
       }
@@ -270,11 +271,37 @@ function Editor() {
     setIsRestaurantUpdating(false)
   }
 
+  const handleRestaurantNameChange = async (newName) => {
+    if (!restaurantId || !restaurantSettings) return
+    setRestaurantSettings((c) => ({ ...c, name: newName }))
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, name: newName })
+    setIsRestaurantUpdating(false)
+  }
+
+  const handleSlugChange = async (newSlug) => {
+    if (!restaurantId || !restaurantSettings) return
+    setRestaurantSettings((c) => ({ ...c, slug: newSlug }))
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, slug: newSlug })
+    setIsRestaurantUpdating(false)
+  }
+
+  const handleDisplayNameChange = async (newDisplayName) => {
+    if (!user) return
+    setProfile((c) => ({ ...c, ownerName: newDisplayName }))
+    setIsRestaurantUpdating(true)
+    await saveUserProfile(user.uid, { ownerName: newDisplayName })
+    setIsRestaurantUpdating(false)
+  }
+
+
+
   const currencySymbol = restaurantSettings?.currency === 'LKR' ? 'Rs. ' : '$'
 
   const selectedTemplate = useMemo(() => findTemplateById(selectedTemplateId), [selectedTemplateId])
   const preferredRestaurantName = useMemo(() =>
-    restaurantSettings?.name?.trim() || profile?.restaurantName?.trim() || '', [restaurantSettings, profile])
+    restaurantSettings?.name?.trim() || '', [restaurantSettings])
   const draftItemCount = useMemo(() =>
     draftMenu ? draftMenu.sections.reduce((c, s) => c + s.items.length, 0) : 0, [draftMenu])
 
@@ -348,7 +375,7 @@ function Editor() {
     const payload = {
       templateId: draftMenu.templateId,
       templateLabel: draftMenu.templateLabel,
-      restaurantName: draftMenu.restaurantName.trim(),
+      restaurantName: restaurantSettings?.name || draftMenu.restaurantName.trim(),
       menuTitle: draftMenu.menuTitle.trim(),
       notes: draftMenu.notes.trim(),
       sections: draftMenu.sections,
@@ -363,7 +390,7 @@ function Editor() {
       remoteId = result.remoteId
     } catch {
       remoteSaved = false
-      remoteId = profile?.slug || restaurantId
+      remoteId = restaurantSettings?.slug || restaurantId
     }
     const targetUrl = `${window.location.origin}/menu/${remoteId || restaurantId}`
     try {
@@ -656,8 +683,8 @@ function Editor() {
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-neutral-900 leading-tight">QR Menu Studio</p>
-            <p className="text-xs text-neutral-400 truncate">{profile?.restaurantName || 'Dashboard'}</p>
+            <p className="text-sm font-bold text-neutral-900 leading-tight">{restaurantSettings?.name || 'QR Menu Studio'}</p>
+            <p className="text-xs text-neutral-400 truncate">Menu Studio</p>
           </div>
         </div>
 
@@ -699,6 +726,7 @@ function Editor() {
       <main className="main-content">
         {activeSection === 'dashboard' && <DashboardScreen
           profile={profile}
+          restaurantSettings={restaurantSettings}
           savedMenus={savedMenus}
           draftMenu={draftMenu}
           draftItemCount={draftItemCount}
@@ -726,6 +754,8 @@ function Editor() {
           isRestaurantUpdating={isRestaurantUpdating}
           handleToggleOnlineOrders={handleToggleOnlineOrders}
           handleCurrencyChange={handleCurrencyChange}
+          handleRestaurantNameChange={handleRestaurantNameChange}
+          handleSlugChange={handleSlugChange}
           savedMenus={savedMenus}
           setDeleteConfirmId={setDeleteConfirmId}
         />}
@@ -736,6 +766,8 @@ function Editor() {
           restaurantId={restaurantId}
           initials={initials}
           logoutUser={logoutUser}
+          isUpdating={isRestaurantUpdating}
+          handleDisplayNameChange={handleDisplayNameChange}
         />}
       </main>
 

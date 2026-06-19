@@ -3,6 +3,7 @@ import { menuTemplates } from '../../data/menuTemplates'
 
 export default function DashboardScreen({
   profile,
+  restaurantSettings,
   savedMenus,
   draftMenu,
   draftItemCount,
@@ -20,7 +21,7 @@ export default function DashboardScreen({
         <div className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
         <p className="font-mono text-xs uppercase tracking-widest text-green-200">Restaurant Menu Studio</p>
         <h1 className="mt-3 text-3xl font-bold text-white">
-          {profile?.restaurantName ? `Welcome back, ${profile.restaurantName}!` : 'Welcome to QR Menu Studio'}
+          {restaurantSettings?.name ? `Welcome back, ${restaurantSettings.name}!` : 'Welcome to QR Menu Studio'}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-green-100 max-w-xl">
           Build and publish your restaurant menus, generate QR codes, and let customers order directly from their phones.

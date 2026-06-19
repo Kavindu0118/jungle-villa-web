@@ -1,4 +1,5 @@
 import Toggle from '../Toggle'
+import { useState } from 'react'
 
 export default function SettingsScreen({
   restaurantSettings,
@@ -7,9 +8,39 @@ export default function SettingsScreen({
   isRestaurantUpdating,
   handleToggleOnlineOrders,
   handleCurrencyChange,
+  handleRestaurantNameChange,
+  handleSlugChange,
   savedMenus,
   setDeleteConfirmId
 }) {
+  const [editingName, setEditingName] = useState(false)
+  const [editingSlug, setEditingSlug] = useState(false)
+  const [tempName, setTempName] = useState(restaurantSettings?.name || '')
+  const [tempSlug, setTempSlug] = useState(restaurantSettings?.slug || '')
+
+  const handleSaveName = async () => {
+    if (tempName.trim()) {
+      await handleRestaurantNameChange(tempName.trim())
+      setEditingName(false)
+    }
+  }
+
+  const handleSaveSlug = async () => {
+    if (tempSlug.trim()) {
+      await handleSlugChange(tempSlug.trim())
+      setEditingSlug(false)
+    }
+  }
+
+  const handleCancelName = () => {
+    setTempName(restaurantSettings?.name || '')
+    setEditingName(false)
+  }
+
+  const handleCancelSlug = () => {
+    setTempSlug(restaurantSettings?.slug || '')
+    setEditingSlug(false)
+  }
   return (
     <div className="p-6 sm:p-8 max-w-2xl">
       <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Settings</p>
@@ -40,14 +71,89 @@ export default function SettingsScreen({
       <div className="card p-5 mb-4">
         <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#16a34a' }}>Restaurant Details</p>
         <div className="space-y-3">
+          {/* Restaurant Name */}
           <div className="flex justify-between items-center py-2 border-b border-neutral-100">
             <span className="text-sm font-medium text-neutral-600">Restaurant Name</span>
-            <span className="text-sm font-semibold text-neutral-900">{restaurantSettings?.name || profile?.restaurantName || '—'}</span>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={tempName}
+                  onChange={(e) => setTempName(e.target.value)}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 px-2 py-1 text-sm outline-none transition focus:border-green-500"
+                  placeholder="Enter restaurant name"
+                />
+                <button
+                  onClick={handleSaveName}
+                  disabled={isRestaurantUpdating || !tempName.trim()}
+                  className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelName}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setTempName(restaurantSettings?.name || '')
+                  setEditingName(true)
+                }}
+                disabled={isRestaurantLoading || isRestaurantUpdating}
+                className="text-sm font-semibold text-neutral-900 hover:text-green-600 transition disabled:opacity-60"
+              >
+                {restaurantSettings?.name || profile?.restaurantName || '—'}
+              </button>
+            )}
           </div>
+
+          {/* Menu Slug */}
           <div className="flex justify-between items-center py-2 border-b border-neutral-100">
             <span className="text-sm font-medium text-neutral-600">Menu Slug</span>
-            <span className="font-mono text-sm text-neutral-700">{restaurantSettings?.slug || '—'}</span>
+            {editingSlug ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={tempSlug}
+                  onChange={(e) => setTempSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  disabled={isRestaurantUpdating}
+                  className="font-mono rounded-lg border border-neutral-300 px-2 py-1 text-sm outline-none transition focus:border-green-500"
+                  placeholder="e.g. my-restaurant"
+                />
+                <button
+                  onClick={handleSaveSlug}
+                  disabled={isRestaurantUpdating || !tempSlug.trim()}
+                  className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelSlug}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setTempSlug(restaurantSettings?.slug || '')
+                  setEditingSlug(true)
+                }}
+                disabled={isRestaurantLoading || isRestaurantUpdating}
+                className="font-mono text-sm text-neutral-700 hover:text-green-600 transition disabled:opacity-60"
+              >
+                {restaurantSettings?.slug || '—'}
+              </button>
+            )}
           </div>
+
+          {/* Status */}
           <div className="flex justify-between items-center py-2">
             <span className="text-sm font-medium text-neutral-600">Status</span>
             <span className={restaurantSettings?.isActive ? 'badge-green' : 'badge-gray'}>
