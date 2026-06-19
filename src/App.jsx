@@ -197,6 +197,57 @@ function Editor() {
     if (auth) return onAuthStateChanged(auth, setUser)
   }, [])
 
+  //toggle service fee
+  const handleToggleServiceFee = async()=>{
+
+  if(!restaurantId || !restaurantSettings)
+    return
+
+
+  const next =
+  !restaurantSettings.serviceFeeEnabled
+
+
+  setRestaurantSettings(c=>({
+    ...c,
+    serviceFeeEnabled:next
+  }))
+
+
+  await saveRestaurantSettings(
+    restaurantId,
+    {
+      ...restaurantSettings,
+      serviceFeeEnabled:next
+    }
+  )
+
+  }
+  
+  //Service Fee Percentage
+  const handleServiceFeePercentageChange =
+  async(value)=>{
+
+  if(!restaurantId || !restaurantSettings)
+    return
+
+
+  setRestaurantSettings(c=>({
+    ...c,
+    serviceFeePercentage:value
+  }))
+
+
+  await saveRestaurantSettings(
+    restaurantId,
+    {
+    ...restaurantSettings,
+    serviceFeePercentage:value
+    }
+  )
+
+  }
+
   // Load saved menus
   useEffect(() => {
     let isActive = true
@@ -233,7 +284,7 @@ function Editor() {
       if (settings) {
         setRestaurantSettings(settings)
       } else {
-        const defaults = { name: '', slug: '', isActive: true, allowOnlineOrders: false }
+        const defaults = { name: '', slug: '', isActive: true, allowOnlineOrders: false, serviceFeeEnabled: false, serviceFeePercentage: 10 }
         setRestaurantSettings(defaults)
         await saveRestaurantSettings(restaurantId, defaults)
       }
@@ -758,6 +809,9 @@ function Editor() {
           handleSlugChange={handleSlugChange}
           savedMenus={savedMenus}
           setDeleteConfirmId={setDeleteConfirmId}
+          handleToggleServiceFee={handleToggleServiceFee}
+          handleServiceFeePercentageChange={handleServiceFeePercentageChange}
+
         />}
         {activeSection === 'profile' && <ProfileScreen
           user={user}
@@ -834,18 +888,88 @@ function MenuViewer() {
 
   const orderStorageKey = id ? `qr-order-${id}` : null
 
-  const orderTotal = useMemo(() => {
-    if (!orderData?.items) return 0
-    return orderData.items.reduce((sum, entry) => {
-      const priceVal = parsePrice(entry.price)
-      return sum + priceVal * entry.qty
-    }, 0)
-  }, [orderData])
+  const subtotal = useMemo(()=>{
+
+    if(!orderData?.items)
+      {
+        return cartItems.reduce(
+          (sum, entry)=>
+            sum + parsePrice(entry.price) * entry.qty,
+          0
+        )
+      }
+
+
+    // Use saved subtotal if available
+    if(orderData?.subtotal !== undefined)
+      return orderData.subtotal
+
+
+    // fallback for old orders
+    return orderData.items.reduce(
+      (sum,entry)=>
+        sum +
+        parsePrice(entry.price) *
+        entry.qty,
+      0
+    )
+
+  },[orderData])
+
+
+
+  const serviceFee = useMemo(()=>{
+
+    // Existing orders use saved snapshot
+    if(orderData)
+    {
+      return Number(orderData.serviceFee || 0)
+    }
+
+
+    // New cart calculation only
+    if(!restaurantSettings?.serviceFeeEnabled)
+      return 0
+
+
+    return subtotal *
+    (
+      Number(restaurantSettings.serviceFeePercentage || 10)
+      /100
+    )
+
+
+  },[
+    subtotal,
+    restaurantSettings,
+    orderData
+  ])
+
+
+
+  const orderTotal = useMemo(()=>{
+
+    // Existing orders use saved snapshot
+    if(orderData)
+    {
+      return Number(orderData.totalAmount || 0)
+    }
+
+
+    return subtotal + serviceFee
+
+
+  },[
+    orderData,
+    subtotal,
+    serviceFee
+  ])
 
   const orderCurrency = useMemo(() => {
-    if (!orderData?.items || orderData.items.length === 0) return '$'
-    return getCurrencySymbol(orderData.items[0].price)
-  }, [orderData])
+    return restaurantSettings?.currency === 'LKR'
+      ? 'Rs. '
+      : '$'
+  }, [restaurantSettings])
 
   useEffect(() => {
     async function load() {
@@ -919,32 +1043,143 @@ function MenuViewer() {
   }
 
   const placeOrder = async () => {
-    if (!menuData?.restaurantId || !allowOnlineOrders) return
-    if (!customerName.trim()) { setOrderError('Please add your name before placing the order.'); return }
-    if (cartItems.length === 0) { setOrderError('Add at least one item to the cart.'); return }
-    setOrderError('')
-    setIsPlacingOrder(true)
-    const orderPayload = {
-      menuId: id,
-      menuTitle: menuData.menuTitle,
-      restaurantId: menuData.restaurantId,
-      restaurantName: menuData.restaurantName || '',
-      deviceId,
-      customerName: customerName.trim(),
-      items: cartItems.map((entry) => ({ itemId: entry.itemId, name: entry.name, price: entry.price, qty: entry.qty })),
-    }
-    const orderId = await createRestaurantOrder(menuData.restaurantId, orderPayload)
-    if (orderId) {
-      if (orderStorageKey) {
-        window.localStorage.setItem(orderStorageKey, JSON.stringify({ orderId, restaurantId: menuData.restaurantId }))
-      }
-      setActiveOrderId(orderId)
-      setCartItems([])
-    } else {
-      setOrderError('Unable to place order. Please try again.')
-    }
-    setIsPlacingOrder(false)
+  if (!menuData?.restaurantId || !allowOnlineOrders) return
+
+  if (!customerName.trim()) {
+    setOrderError('Please add your name before placing the order.')
+    return
   }
+
+  if (cartItems.length === 0) {
+    setOrderError('Add at least one item to the cart.')
+    return
+  }
+
+  setOrderError('')
+  setIsPlacingOrder(true)
+
+
+  // calculate new order subtotal from cart
+  const newSubtotal = cartItems.reduce(
+    (sum, item) =>
+      sum + parsePrice(item.price) * item.qty,
+    0
+  )
+
+
+  const newServiceFee =
+    restaurantSettings?.serviceFeeEnabled
+      ? newSubtotal *
+        (
+          Number(
+            restaurantSettings.serviceFeePercentage || 10
+          ) / 100
+        )
+      : 0
+
+
+  const newTotal =
+    newSubtotal + newServiceFee
+
+
+
+  const orderPayload = {
+
+    menuId: id,
+
+    menuTitle: menuData.menuTitle,
+
+    restaurantId: menuData.restaurantId,
+
+    restaurantName: menuData.restaurantName || '',
+
+
+    currency:
+      restaurantSettings?.currency || 'USD',
+
+
+    deviceId,
+
+
+    customerName:
+      customerName.trim(),
+
+
+
+    subtotal: newSubtotal,
+
+
+    serviceFeeEnabled:
+      Boolean(
+        restaurantSettings?.serviceFeeEnabled
+      ),
+
+
+    serviceFeePercentage:
+      Number(
+        restaurantSettings?.serviceFeePercentage || 0
+      ),
+
+
+    serviceFee:
+      newServiceFee,
+
+
+    totalAmount:
+      newTotal,
+
+
+
+    items: cartItems.map((entry) => ({
+      itemId: entry.itemId,
+      name: entry.name,
+      price: entry.price,
+      qty: entry.qty
+    }))
+
+  }
+
+
+
+  const orderId =
+    await createRestaurantOrder(
+      menuData.restaurantId,
+      orderPayload
+    )
+
+
+  if(orderId){
+
+    if(orderStorageKey){
+
+      window.localStorage.setItem(
+        orderStorageKey,
+        JSON.stringify({
+          orderId,
+          restaurantId:
+            menuData.restaurantId
+        })
+      )
+
+    }
+
+
+    setActiveOrderId(orderId)
+
+    setCartItems([])
+
+  }
+  else{
+
+    setOrderError(
+      'Unable to place order. Please try again.'
+    )
+
+  }
+
+
+  setIsPlacingOrder(false)
+}
 
   const clearOrder = () => {
     if (orderStorageKey) window.localStorage.removeItem(orderStorageKey)
@@ -1038,7 +1273,7 @@ function MenuViewer() {
                 {orderData.items.map((entry) => {
                   const priceVal = parsePrice(entry.price)
                   const itemTotal = priceVal * entry.qty
-                  const currency = getCurrencySymbol(entry.price)
+                  const currency = orderCurrency
                   return (
                     <div key={entry.itemId} className="flex items-center justify-between gap-3 text-sm">
                       <div>
@@ -1050,14 +1285,44 @@ function MenuViewer() {
                   )
                 })}
               </div>
-              <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-neutral-900">Total Amount</p>
-                <p className="font-mono text-base font-bold text-neutral-900">{orderCurrency}{orderTotal.toFixed(2)}</p>
+              <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-neutral-600">
+                    Subtotal
+                  </p>
+                  <p className="font-mono text-sm text-neutral-900">
+                    {orderCurrency}{subtotal.toFixed(2)}
+                  </p>
+                </div>
+
+                {orderData?.serviceFeeEnabled && (
+                  <div className="flex items-center justify-between">
+
+                    <p className="text-sm text-neutral-600">
+                      Service Fee ({orderData?.serviceFeePercentage || 0}%)
+                    </p>
+
+                    <p className="font-mono text-sm text-neutral-900">
+                      {orderCurrency}{Number(orderData?.serviceFee || 0).toFixed(2)}
+                    </p>
+
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t border-neutral-200 pt-2">
+                  <p className="text-sm font-semibold text-neutral-900">
+                    Total Amount
+                  </p>
+                  <p className="font-mono text-base font-bold text-neutral-900">
+                    {orderCurrency}{orderTotal.toFixed(2)}
+                  </p>
+                </div>
+
               </div>
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            )}
+          </div>
+        )}
 
       {allowOnlineOrders && orderStatus === 'completed' && (
         <div className="mt-4 space-y-4">
@@ -1075,7 +1340,7 @@ function MenuViewer() {
                 {orderData.items.map((entry) => {
                   const priceVal = parsePrice(entry.price)
                   const itemTotal = priceVal * entry.qty
-                  const currency = getCurrencySymbol(entry.price)
+                  const currency = orderCurrency
                   return (
                     <div key={entry.itemId} className="flex items-center justify-between gap-3 text-sm">
                       <div>
@@ -1087,9 +1352,39 @@ function MenuViewer() {
                   )
                 })}
               </div>
-              <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-neutral-900">Total Paid</p>
-                <p className="font-mono text-base font-bold text-neutral-900">{orderCurrency}{orderTotal.toFixed(2)}</p>
+              <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-neutral-600">
+                    Subtotal
+                  </p>
+                  <p className="font-mono text-sm text-neutral-900">
+                    {orderCurrency}{subtotal.toFixed(2)}
+                  </p>
+                </div>
+
+                {orderData?.serviceFeeEnabled && (
+                  <div className="flex items-center justify-between">
+
+                    <p className="text-sm text-neutral-600">
+                      Service Fee ({orderData?.serviceFeePercentage || 0}%)
+                    </p>
+
+                    <p className="font-mono text-sm text-neutral-900">
+                      {orderCurrency}{Number(orderData?.serviceFee || 0).toFixed(2)}
+                    </p>
+
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t border-neutral-200 pt-2">
+                  <p className="text-sm font-semibold text-neutral-900">
+                    Total Paid
+                  </p>
+                  <p className="font-mono text-base font-bold text-neutral-900">
+                    {orderCurrency}{orderTotal.toFixed(2)}
+                  </p>
+                </div>
+
               </div>
             </div>
           )}

@@ -7,6 +7,8 @@ export default function SettingsScreen({
   isRestaurantLoading,
   isRestaurantUpdating,
   handleToggleOnlineOrders,
+  handleToggleServiceFee,
+  handleServiceFeePercentageChange,
   handleCurrencyChange,
   handleRestaurantNameChange,
   handleSlugChange,
@@ -208,6 +210,80 @@ export default function SettingsScreen({
           </div>
           <Toggle on={false} onToggle={() => {}} disabled={true} />
         </div>
+      </div>
+      {/* Service Fee */}
+      <div className="card p-5 mb-4">
+      <div className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-4">
+
+        <div>
+          <p className="font-semibold text-neutral-900">
+            Service Fee
+          </p>
+
+          <p className="mt-1 text-sm text-neutral-500">
+            Add service charge automatically to customer bills.
+          </p>
+        </div>
+
+
+        <Toggle
+          on={!!restaurantSettings?.serviceFeeEnabled}
+          onToggle={handleToggleServiceFee}
+          disabled={
+            isRestaurantLoading ||
+            isRestaurantUpdating ||
+            !restaurantSettings
+          }
+        />
+
+      </div>
+
+
+      {restaurantSettings?.serviceFeeEnabled && (
+
+      <div className="flex items-center justify-between gap-4">
+
+      <div>
+        <p className="font-semibold text-neutral-900">
+            Service Fee Percentage
+        </p>
+
+        <p className="text-sm text-neutral-500">
+            Default restaurant service charge
+        </p>
+      </div>
+
+
+      <div className="flex items-center gap-2">
+
+      <input
+        type="number"
+        min="0"
+        max="100"
+        value={
+          restaurantSettings?.serviceFeePercentage || 10
+        }
+
+        onChange={(e)=>
+          handleServiceFeePercentageChange(
+            Number(e.target.value)
+          )
+        }
+
+        className="
+          w-20 rounded-lg border 
+          border-neutral-300 px-3 py-2
+          text-sm
+        "
+      />
+
+      <span>%</span>
+
+      </div>
+
+      </div>
+
+      )}
       </div>
 
       {/* Danger Zone */}
