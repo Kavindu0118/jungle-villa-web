@@ -224,7 +224,7 @@ function Editor() {
 
   }
   
-  //HandleService Fee Percentage
+  //Handle Service Fee Percentage in settings dashboard
   const handleServiceFeePercentageChange =
   async(value)=>{
 
@@ -735,7 +735,7 @@ function Editor() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-neutral-900 leading-tight">{restaurantSettings?.name || 'QR Menu Studio'}</p>
-            <p className="text-xs text-neutral-400 truncate">Menu Studio</p>
+            <p className="text-xs text-neutral-400 truncate">QR Menu Studio</p>
           </div>
         </div>
 
