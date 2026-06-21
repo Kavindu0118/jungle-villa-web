@@ -1,5 +1,4 @@
 import { IconPlus, IconMenu, IconEdit, IconEye, IconQr } from '../Icons'
-import { menuTemplates } from '../../data/menuTemplates'
 
 export default function DashboardScreen({
   profile,
@@ -46,9 +45,8 @@ export default function DashboardScreen({
       </div>
 
       {/* Stats */}
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mt-6 grid grid-cols-3 gap-4">
         {[
-          { label: 'Templates', value: menuTemplates.length, color: '#16a34a' },
           { label: 'Saved Menus', value: savedMenus.length, color: '#0ea5e9' },
           { label: 'Sections', value: draftMenu ? draftMenu.sections.length : (savedMenus[0]?.sections?.length || 0), color: '#f59e0b' },
           { label: 'Items', value: draftItemCount || (savedMenus[0]?.sections?.reduce((c, s) => c + s.items.length, 0) || 0), color: '#8b5cf6' },
