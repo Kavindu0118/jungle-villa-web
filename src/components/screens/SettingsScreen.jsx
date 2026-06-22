@@ -13,7 +13,11 @@ export default function SettingsScreen({
   handleRestaurantNameChange,
   handleSlugChange,
   savedMenus,
-  setDeleteConfirmId
+  setDeleteConfirmId,
+  tableTrackingEnabled,
+  tableCount,
+  handleToggleTableTracking,
+  handleTableCountChange
 }) {
   const [editingName, setEditingName] = useState(false)
   const [editingSlug, setEditingSlug] = useState(false)
@@ -285,6 +289,63 @@ export default function SettingsScreen({
 
       )}
       </div>
+      {/* Table Tracking */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-5">
+        <div className="flex items-center justify-between">
+
+          <div>
+            <h3 className="font-semibold text-neutral-900">
+              Table Tracking
+            </h3>
+
+            <p className="text-sm text-neutral-500">
+              Generate a unique QR code for each table.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleToggleTableTracking}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+              tableTrackingEnabled
+                ? "bg-green-600"
+                : "bg-neutral-300"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                tableTrackingEnabled
+                  ? "translate-x-6"
+                  : "translate-x-1"
+              }`}
+            />
+          </button>
+
+        </div>
+
+        {tableTrackingEnabled && (
+          <div className="mt-4">
+
+            <label className="block text-sm font-medium text-neutral-700">
+              Number of Tables
+            </label>
+
+            <input
+              type="number"
+              min="1"
+              value={tableCount}
+              onChange={(e) =>
+                handleTableCountChange(e.target.value)
+              }
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3 py-2"
+              placeholder="Enter table count"
+            />
+
+          </div>
+        )}
+
+      </div>
+      
 
       {/* Danger Zone */}
       <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
