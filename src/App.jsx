@@ -211,6 +211,8 @@ function Editor() {
 
   // Restaurant / settings state
   const [restaurantSettings, setRestaurantSettings] = useState(null)
+  const [tableTrackingEnabled,setTableTrackingEnabled] = useState(false)
+  const [tableCount,setTableCount] = useState(0)
   const [isRestaurantLoading, setIsRestaurantLoading] = useState(false)
   const [isRestaurantUpdating, setIsRestaurantUpdating] = useState(false)
   const restaurantId = profile?.restaurantId || null
@@ -281,7 +283,12 @@ function Editor() {
       const menusWithQr = await Promise.all(
         menus.map(async (m) => {
           const slug = m.slug || m.id
-          const targetUrl = `${window.location.origin}/menu/${slug}`
+          const targetUrl =
+          restaurantSettings?.tableTrackingEnabled
+          ?
+          `${window.location.origin}/menu/${slug}/tableNo-1`
+          :
+          `${window.location.origin}/menu/${slug}`
           let qrDataUrl = m.qrDataUrl || ''
           if (!qrDataUrl) {
             try { qrDataUrl = await QRCode.toDataURL(targetUrl, { width: 320, margin: 1, color: { dark: '#101010', light: '#ffffff' } }) }
@@ -306,8 +313,24 @@ function Editor() {
       if (!isActive) return
       if (settings) {
         setRestaurantSettings(settings)
-      } else {
-        const defaults = { name: '', slug: '', isActive: true, allowOnlineOrders: false, serviceFeeEnabled: false, serviceFeePercentage: 10 }
+        setTableTrackingEnabled(
+        Boolean(settings.tableTrackingEnabled)
+      )
+        setTableCount(
+        Number(settings.tableCount || 0)
+        )
+      }else {
+        const defaults = { 
+          name: '', 
+          slug: '', 
+          isActive: true,
+          allowOnlineOrders: false,
+          serviceFeeEnabled:false,
+          serviceFeePercentage:10,
+          tableTrackingEnabled:false,
+          tableCount:0
+
+          }
         setRestaurantSettings(defaults)
         await saveRestaurantSettings(restaurantId, defaults)
       }
@@ -336,7 +359,39 @@ function Editor() {
     await saveRestaurantSettings(restaurantId, { ...restaurantSettings, allowOnlineOrders: nextValue })
     setIsRestaurantUpdating(false)
   }
-
+  const handleToggleTableTracking = async()=>{
+    if(!restaurantId || !restaurantSettings)
+    return
+    const next =
+    !tableTrackingEnabled
+    setTableTrackingEnabled(next)
+    const updated={
+    ...restaurantSettings,
+    tableTrackingEnabled:next,
+    tableCount:
+    next ? tableCount : 0
+    }
+    setRestaurantSettings(updated)
+    await saveRestaurantSettings(
+    restaurantId,
+    updated
+    )
+  }
+  const handleTableCountChange = async(value)=>{
+    const count =
+    Number(value)
+    setTableCount(count)
+    const updated={
+    ...restaurantSettings,
+    tableTrackingEnabled:true,
+    tableCount:count
+    }
+    setRestaurantSettings(updated)
+    await saveRestaurantSettings(
+    restaurantId,
+    updated
+    )
+  }
   const handleCurrencyChange = async (newCurrency) => {
     if (!restaurantId || !restaurantSettings) return
     setRestaurantSettings((c) => ({ ...c, currency: newCurrency }))
@@ -484,8 +539,47 @@ function Editor() {
     setActiveSection('my-menu')
     setShowBuilder(false)
   }
-
-  const openQrPreview = (menu) => setQrPreview({ menuTitle: menu.menuTitle, restaurantName: menu.restaurantName, qrDataUrl: menu.qrDataUrl })
+  const openQrPreview = async(menu)=>{
+    const slug =
+    menu.remoteId || menu.slug
+    let qrList=[]
+    if(restaurantSettings?.tableTrackingEnabled)
+    {
+    for(
+    let i=1;
+    i<=restaurantSettings.tableCount;
+    i++
+    )
+    {
+    qrList.push({
+    table:i,
+    url:
+    `${window.location.origin}/menu/${slug}/tableNo-${i}`
+    })
+    }
+    }
+    else
+    {
+    qrList.push({
+    table:null,
+    url:
+    `${window.location.origin}/menu/${slug}`
+    })
+    }
+    const generated =
+    await Promise.all(
+    qrList.map(async(q)=>({
+    ...q,
+    qrDataUrl:
+    await QRCode.toDataURL(q.url)
+    }))
+    )
+    setQrPreview({
+    menuTitle:menu.menuTitle,
+    restaurantName:menu.restaurantName,
+    qrs:generated
+    })
+  }
   const closeQrPreview = () => setQrPreview(null)
 
   const openMenuPreview = (menu) => {
@@ -918,7 +1012,14 @@ function Editor() {
           setDeleteConfirmId={setDeleteConfirmId}
           handleToggleServiceFee={handleToggleServiceFee}
           handleServiceFeePercentageChange={handleServiceFeePercentageChange}
-
+          tableTrackingEnabled={tableTrackingEnabled}
+          tableCount={tableCount}
+          handleToggleTableTracking={
+          handleToggleTableTracking
+          }
+          handleTableCountChange={
+          handleTableCountChange
+          }
         />}
         {activeSection === 'profile' && <ProfileScreen
           user={user}
@@ -948,11 +1049,38 @@ function Editor() {
                 <button onClick={closeQrPreview} className="btn-ghost p-2 flex-shrink-0"><IconX /></button>
               </div>
               <div className="flex justify-center rounded-2xl border p-5" style={{ background: '#f8f8f8', borderColor: '#e5e7eb' }}>
-                <img
-                  src={qrPreview.qrDataUrl}
-                  alt={`${qrPreview.menuTitle} QR code`}
-                  className="h-[min(70vw,22rem)] w-[min(70vw,22rem)] rounded-xl"
-                />
+                {
+                  qrPreview.qrs?.map((qr) => (
+                    <div
+                      key={qr.url}
+                      className="mb-6 text-center"
+                    >
+                      <h3 className="mb-2 font-bold text-neutral-900">
+                        {
+                          qr.table
+                          ?
+                          `Table ${qr.table}`
+                          :
+                          "Main Menu QR"
+                        }
+                      </h3>
+                      <img
+                        src={qr.qrDataUrl}
+                        alt={
+                          qr.table
+                          ?
+                          `Table ${qr.table} QR code`
+                          :
+                          "Menu QR code"
+                        }
+                        className="mx-auto h-[min(70vw,22rem)] w-[min(70vw,22rem)] rounded-xl"
+                      />
+                      <p className="mt-2 break-all text-xs text-neutral-400">
+                        {qr.url}
+                      </p>
+                    </div>
+                  ))
+                }
               </div>
               <p className="mt-3 text-center text-xs text-neutral-400">Scan this QR code to open the menu</p>
             </div>
@@ -979,7 +1107,7 @@ const getCurrencySymbol = (priceStr) => {
 
 // ─── MenuViewer ───────────────────────────────────────────────────────────────
 function MenuViewer() {
-  const { id } = useParams()
+  const { id, tableNo } = useParams()
   const [menuData, setMenuData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [restaurantSettings, setRestaurantSettings] = useState(null)
@@ -1191,7 +1319,12 @@ function MenuViewer() {
 
 
   const orderPayload = {
-
+    tableNo:
+    tableNo
+    ?
+    tableNo.replace("tableNo-","")
+    :
+    null,
     menuId: id,
 
     menuTitle: menuData.menuTitle,
@@ -1565,7 +1698,14 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Editor />} />
-      <Route path="/menu/:id" element={<MenuViewer />} />
+      <Route 
+      path="/menu/:id/:tableNo"
+      element={<MenuViewer />}
+      />
+      <Route 
+      path="/menu/:id"
+      element={<MenuViewer />}
+      />
     </Routes>
   )
 }
