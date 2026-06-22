@@ -25,6 +25,8 @@ import {
   deleteMenuRecord,
 } from './lib/menuStorage'
 
+import { uploadMenuItemImage, isSupabaseConfigured } from './lib/supabase'
+
 const createId = (prefix = 'id') =>
   `${prefix}-${Date.now()}-${Math.floor(Math.random() * 100000)}`
 
@@ -43,6 +45,7 @@ const createEmptyItem = () => ({
   name: '',
   description: '',
   price: '',
+  imageUrl: '',
 })
 
 const createEmptySection = () => ({
@@ -78,18 +81,23 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
               <h5 className="text-lg font-semibold text-neutral-900">{section.title}</h5>
               <div className="mt-3 space-y-3">
                 {section.items.map((item) => (
-                  <div key={item.id} className="border-b border-neutral-200 pb-2 last:border-none last:pb-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="font-mono text-sm text-neutral-800">{formatPrice(item.price)}</p>
-                        {canOrder && (
-                          <button type="button" onClick={() => onAddToCart(item)}
-                            className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
-                        )}
+                  <div key={item.id} className="border-b border-neutral-200 pb-2 last:border-none last:pb-0 flex items-start gap-4">
+                    {item.imageUrl && (
+                      <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded-lg border border-neutral-200 flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-medium text-neutral-900 truncate">{item.name || 'Untitled Item'}</p>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <p className="font-mono text-sm text-neutral-800">{formatPrice(item.price)}</p>
+                          {canOrder && (
+                            <button type="button" onClick={() => onAddToCart(item)}
+                              className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
+                          )}
+                        </div>
                       </div>
+                      <p className="text-sm text-neutral-600 line-clamp-2">{item.description || 'No description'}</p>
                     </div>
-                    <p className="text-sm text-neutral-600">{item.description || 'No description'}</p>
                   </div>
                 ))}
               </div>
@@ -112,15 +120,22 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
               <h5 className="text-base font-semibold text-neutral-900">{section.title}</h5>
               <div className="mt-3 space-y-2">
                 {section.items.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-neutral-200 bg-white p-2">
-                    <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
-                    <p className="text-xs text-neutral-600">{item.description || 'No description'}</p>
-                    <div className="mt-1 flex items-center justify-between gap-2">
-                      <p className="font-mono text-xs text-neutral-800">{formatPrice(item.price)}</p>
-                      {canOrder && (
-                        <button type="button" onClick={() => onAddToCart(item)}
-                          className="rounded-full border border-neutral-300 px-2.5 py-1 text-[0.7rem] font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
-                      )}
+                  <div key={item.id} className="rounded-lg border border-neutral-200 bg-white overflow-hidden flex flex-col">
+                    {item.imageUrl && (
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-24 object-cover border-b border-neutral-100" />
+                    )}
+                    <div className="p-2 flex-1 flex flex-col justify-between">
+                      <div>
+                        <p className="font-medium text-neutral-900 text-sm">{item.name || 'Untitled Item'}</p>
+                        <p className="text-xs text-neutral-600 line-clamp-2">{item.description || 'No description'}</p>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <p className="font-mono text-xs text-neutral-800">{formatPrice(item.price)}</p>
+                        {canOrder && (
+                          <button type="button" onClick={() => onAddToCart(item)}
+                            className="rounded-full border border-neutral-300 px-2.5 py-1 text-[0.7rem] font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -145,17 +160,24 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
             <h5 className="border-b border-neutral-300 pb-2 text-lg font-semibold text-neutral-900">{section.title}</h5>
             <div className="mt-3 space-y-3">
               {section.items.map((item) => (
-                <div key={item.id} className="flex items-start justify-between gap-3 text-sm">
-                  <div>
-                    <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
-                    <p className="text-neutral-600">{item.description || 'No description'}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono text-neutral-800">{formatPrice(item.price)}</p>
-                    {canOrder && (
-                      <button type="button" onClick={() => onAddToCart(item)}
-                        className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
-                    )}
+                <div key={item.id} className="flex items-start gap-3 text-sm border-b border-neutral-100 pb-2 last:border-none last:pb-0">
+                  {item.imageUrl && (
+                    <img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded-md border border-neutral-200 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
+                        <p className="text-neutral-600">{item.description || 'No description'}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <p className="font-mono text-neutral-800">{formatPrice(item.price)}</p>
+                        {canOrder && (
+                          <button type="button" onClick={() => onAddToCart(item)}
+                            className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -185,6 +207,7 @@ function Editor() {
   const [saveStatus, setSaveStatus] = useState('Choose a template to begin.')
   const [isSaving, setIsSaving] = useState(false)
   const [qrPreview, setQrPreview] = useState(null)
+  const [uploadingItems, setUploadingItems] = useState({})
 
   // Restaurant / settings state
   const [restaurantSettings, setRestaurantSettings] = useState(null)
@@ -598,7 +621,14 @@ function Editor() {
               {/* Sections */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-neutral-700">Sections & Items</p>
+                  <div>
+                    <p className="text-sm font-semibold text-neutral-700">Sections & Items</p>
+                    {!isSupabaseConfigured && (
+                      <p className="text-xs text-amber-600 font-medium mt-0.5">
+                        ⚠️ Supabase credentials missing. Image uploads are disabled.
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={addSection}
@@ -628,31 +658,108 @@ function Editor() {
                       </div>
 
                       <div className="flex flex-col gap-2">
-                        {section.items.map((item) => (
-                          <div key={item.id} className="grid gap-2 rounded-xl border border-neutral-200 bg-white p-3 lg:grid-cols-[1.2fr_1.8fr_0.6fr_auto]">
-                            <input value={item.name} onChange={(e) => updateItemField(section.id, item.id, 'name', e.target.value)}
-                              placeholder="Item name" className="input-field text-sm" />
-                            <input value={item.description} onChange={(e) => updateItemField(section.id, item.id, 'description', e.target.value)}
-                              placeholder="Description" className="input-field text-sm" />
-                            <div className="input-wrapper">
-                              <span className="text-sm font-medium text-neutral-500 mr-1.5 whitespace-nowrap">{currencySymbol}</span>
-                              <input 
-                                value={item.price} 
-                                onChange={(e) => {
-                                  let val = e.target.value.replace(/[^0-9.]/g, '');
-                                  const parts = val.split('.');
-                                  if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                                  updateItemField(section.id, item.id, 'price', val);
-                                }}
-                                placeholder="0.00" 
-                              />
+                        {section.items.map((item) => {
+                          const isUploading = uploadingItems[item.id]
+                          return (
+                            <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 sm:flex-row sm:items-center">
+                              {/* Image Upload/Preview */}
+                              <div className="flex-shrink-0 flex items-center justify-center">
+                                {item.imageUrl ? (
+                                  <div className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-200">
+                                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                    <button
+                                      type="button"
+                                      onClick={() => updateItemField(section.id, item.id, 'imageUrl', '')}
+                                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                      title="Remove image"
+                                    >
+                                      <IconTrash className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <label 
+                                    className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition ${
+                                      isUploading 
+                                        ? 'border-neutral-300 bg-neutral-50' 
+                                        : !isSupabaseConfigured || !restaurantId
+                                          ? 'border-neutral-200 bg-neutral-50/50 cursor-not-allowed opacity-50'
+                                          : 'border-neutral-300 hover:border-green-500 bg-neutral-50/50 hover:bg-neutral-50'
+                                    }`}
+                                    title={
+                                      !isSupabaseConfigured 
+                                        ? "Supabase not configured" 
+                                        : !restaurantId 
+                                          ? "Onboarding not complete" 
+                                          : "Upload image (up to 1MB)"
+                                    }
+                                  >
+                                    {isUploading ? (
+                                      <span className="text-[10px] text-neutral-500 animate-pulse font-medium">Uploading...</span>
+                                    ) : (
+                                      <>
+                                        <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        <span className="text-[9px] text-neutral-400 font-semibold mt-0.5">Add Image</span>
+                                      </>
+                                    )}
+                                    {isSupabaseConfigured && restaurantId && (
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        disabled={isUploading}
+                                        onChange={async (e) => {
+                                          const file = e.target.files?.[0]
+                                          if (!file) return
+                                          if (file.size > 1024 * 1024) {
+                                            alert('Image size exceeds 1 MB limit. Please upload a smaller image.')
+                                            return
+                                          }
+                                          try {
+                                            setUploadingItems(prev => ({ ...prev, [item.id]: true }))
+                                            const url = await uploadMenuItemImage(restaurantId, item.id, file)
+                                            updateItemField(section.id, item.id, 'imageUrl', url)
+                                          } catch (err) {
+                                            alert(err.message || 'Failed to upload image')
+                                          } finally {
+                                            setUploadingItems(prev => ({ ...prev, [item.id]: false }))
+                                          }
+                                        }}
+                                      />
+                                    )}
+                                  </label>
+                                )}
+                              </div>
+
+                              {/* Inputs */}
+                              <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-[1.5fr_2fr_1fr]">
+                                <input value={item.name} onChange={(e) => updateItemField(section.id, item.id, 'name', e.target.value)}
+                                  placeholder="Item name" className="input-field text-sm" />
+                                <input value={item.description} onChange={(e) => updateItemField(section.id, item.id, 'description', e.target.value)}
+                                  placeholder="Description" className="input-field text-sm" />
+                                <div className="input-wrapper">
+                                  <span className="text-sm font-medium text-neutral-500 mr-1.5 whitespace-nowrap">{currencySymbol}</span>
+                                  <input 
+                                    value={item.price} 
+                                    onChange={(e) => {
+                                      let val = e.target.value.replace(/[^0-9.]/g, '');
+                                      const parts = val.split('.');
+                                      if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                                      updateItemField(section.id, item.id, 'price', val);
+                                    }}
+                                    placeholder="0.00" 
+                                  />
+                                </div>
+                              </div>
+
+                              <button type="button" onClick={() => removeItem(section.id, item.id)}
+                                className="rounded-lg border border-neutral-200 px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600 self-stretch sm:self-auto flex items-center justify-center">
+                                ×
+                              </button>
                             </div>
-                            <button type="button" onClick={() => removeItem(section.id, item.id)}
-                              className="rounded-lg border border-neutral-200 px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600">
-                              ×
-                            </button>
-                          </div>
-                        ))}
+                          )
+                        })}
                       </div>
 
                       <button
