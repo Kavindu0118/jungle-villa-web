@@ -1149,7 +1149,7 @@ function MenuViewer() {
       0
     )
 
-  },[orderData])
+  },[orderData, cartItems])
 
 
 
@@ -1650,23 +1650,52 @@ function MenuViewer() {
           )}
 
           {cartItems.length > 0 && (
-            <div className="space-y-3">
-              {cartItems.map((entry) => (
-                <div key={entry.itemId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
-                  <div>
-                    <p className="font-medium text-neutral-900">{entry.name}</p>
-                    <p className="text-xs text-neutral-500">{entry.price}</p>
+            <>
+              <div className="space-y-3">
+                {cartItems.map((entry) => (
+                  <div key={entry.itemId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm">
+                    <div>
+                      <p className="font-medium text-neutral-900">{entry.name}</p>
+                      <p className="text-xs text-neutral-500">{entry.price} {entry.qty > 1 ? `× ${entry.qty}` : ''}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => updateCartQty(entry.itemId, entry.qty - 1)}
+                        className="rounded-full border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-700">−</button>
+                      <span className="w-6 text-center text-sm font-medium text-neutral-800">{entry.qty}</span>
+                      <button type="button" onClick={() => updateCartQty(entry.itemId, entry.qty + 1)}
+                        className="rounded-full border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-700">+</button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => updateCartQty(entry.itemId, entry.qty - 1)}
-                      className="rounded-full border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-700">−</button>
-                    <span className="w-6 text-center text-sm font-medium text-neutral-800">{entry.qty}</span>
-                    <button type="button" onClick={() => updateCartQty(entry.itemId, entry.qty + 1)}
-                      className="rounded-full border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-700">+</button>
-                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-neutral-600">Subtotal</p>
+                  <p className="font-mono text-sm font-semibold text-neutral-900">
+                    {orderCurrency}{subtotal.toFixed(2)}
+                  </p>
                 </div>
-              ))}
-            </div>
+
+                {restaurantSettings?.serviceFeeEnabled && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-neutral-600">
+                      Service Fee ({restaurantSettings.serviceFeePercentage || 10}%)
+                    </p>
+                    <p className="font-mono text-sm font-semibold text-neutral-900">
+                      {orderCurrency}{serviceFee.toFixed(2)}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t border-neutral-200 pt-2">
+                  <p className="text-sm font-semibold text-neutral-900">Total Amount</p>
+                  <p className="font-mono text-base font-bold text-neutral-900">
+                    {orderCurrency}{orderTotal.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </>
           )}
 
           {orderError && <p className="text-sm text-red-600">{orderError}</p>}
