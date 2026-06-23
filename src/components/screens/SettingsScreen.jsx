@@ -73,6 +73,108 @@ export default function SettingsScreen({
         )}
       </div>
 
+      {/* Service Fee */}
+      <div className="card p-5 mb-4">
+        <div className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-4">
+          <div>
+            <p className="font-semibold text-neutral-900">
+              Service Fee
+            </p>
+            <p className="mt-1 text-sm text-neutral-500">
+              Add service charge automatically to customer bills.
+            </p>
+          </div>
+          <Toggle
+            on={!!restaurantSettings?.serviceFeeEnabled}
+            onToggle={handleToggleServiceFee}
+            disabled={
+              isRestaurantLoading ||
+              isRestaurantUpdating ||
+              !restaurantSettings
+            }
+          />
+        </div>
+
+        {restaurantSettings?.serviceFeeEnabled && (
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold text-neutral-900">
+                Service Fee Percentage
+              </p>
+              <p className="text-sm text-neutral-500">
+                Default restaurant service charge
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={
+                  restaurantSettings?.serviceFeePercentage || 10
+                }
+                onChange={(e)=>
+                  handleServiceFeePercentageChange(
+                    Number(e.target.value)
+                  )
+                }
+                className="w-20 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              />
+              <span>%</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Table Tracking */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-5 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-neutral-900">
+              Table Tracking
+            </h3>
+            <p className="text-sm text-neutral-500">
+              Generate a unique QR code for each table.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleTableTracking}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full ${
+              tableTrackingEnabled
+                ? "bg-green-600"
+                : "bg-neutral-300"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                tableTrackingEnabled
+                  ? "translate-x-6"
+                  : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        {tableTrackingEnabled && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-neutral-700">
+              Number of Tables
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={tableCount}
+              onChange={(e) =>
+                handleTableCountChange(e.target.value)
+              }
+              className="mt-2 w-full rounded-xl border border-neutral-300 px-3 py-2"
+              placeholder="Enter table count"
+            />
+          </div>
+        )}
+      </div>
+
       {/* Restaurant Details */}
       <div className="card p-5 mb-4">
         <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#16a34a' }}>Restaurant Details</p>
@@ -215,137 +317,6 @@ export default function SettingsScreen({
           <Toggle on={false} onToggle={() => {}} disabled={true} />
         </div>
       </div>
-      {/* Service Fee */}
-      <div className="card p-5 mb-4">
-      <div className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-4">
-
-        <div>
-          <p className="font-semibold text-neutral-900">
-            Service Fee
-          </p>
-
-          <p className="mt-1 text-sm text-neutral-500">
-            Add service charge automatically to customer bills.
-          </p>
-        </div>
-
-
-        <Toggle
-          on={!!restaurantSettings?.serviceFeeEnabled}
-          onToggle={handleToggleServiceFee}
-          disabled={
-            isRestaurantLoading ||
-            isRestaurantUpdating ||
-            !restaurantSettings
-          }
-        />
-
-      </div>
-
-
-      {restaurantSettings?.serviceFeeEnabled && (
-
-      <div className="flex items-center justify-between gap-4">
-
-      <div>
-        <p className="font-semibold text-neutral-900">
-            Service Fee Percentage
-        </p>
-
-        <p className="text-sm text-neutral-500">
-            Default restaurant service charge
-        </p>
-      </div>
-
-
-      <div className="flex items-center gap-2">
-
-      <input
-        type="number"
-        min="0"
-        max="100"
-        value={
-          restaurantSettings?.serviceFeePercentage || 10
-        }
-
-        onChange={(e)=>
-          handleServiceFeePercentageChange(
-            Number(e.target.value)
-          )
-        }
-
-        className="
-          w-20 rounded-lg border 
-          border-neutral-300 px-3 py-2
-          text-sm
-        "
-      />
-
-      <span>%</span>
-
-      </div>
-
-      </div>
-
-      )}
-      </div>
-      {/* Table Tracking */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-        <div className="flex items-center justify-between">
-
-          <div>
-            <h3 className="font-semibold text-neutral-900">
-              Table Tracking
-            </h3>
-
-            <p className="text-sm text-neutral-500">
-              Generate a unique QR code for each table.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleToggleTableTracking}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full ${
-              tableTrackingEnabled
-                ? "bg-green-600"
-                : "bg-neutral-300"
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                tableTrackingEnabled
-                  ? "translate-x-6"
-                  : "translate-x-1"
-              }`}
-            />
-          </button>
-
-        </div>
-
-        {tableTrackingEnabled && (
-          <div className="mt-4">
-
-            <label className="block text-sm font-medium text-neutral-700">
-              Number of Tables
-            </label>
-
-            <input
-              type="number"
-              min="1"
-              value={tableCount}
-              onChange={(e) =>
-                handleTableCountChange(e.target.value)
-              }
-              className="mt-2 w-full rounded-xl border border-neutral-300 px-3 py-2"
-              placeholder="Enter table count"
-            />
-
-          </div>
-        )}
-
-      </div>
-      
 
       {/* Danger Zone */}
       <div className="rounded-2xl border border-red-200 bg-red-50 p-5">

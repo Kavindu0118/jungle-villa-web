@@ -1,9 +1,10 @@
 import LoginModal from "./LoginModal";
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Routes, Route, useParams } from 'react-router-dom'
 import { auth, signInWithGoogle, logoutUser } from './lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import QRCode from 'qrcode'
+import { jsPDF } from 'jspdf'
 import { cloneTemplate, findTemplateById, menuTemplates } from './data/menuTemplates'
 import DashboardScreen from './components/screens/DashboardScreen'
 import MyMenuScreen from './components/screens/MyMenuScreen'
@@ -208,6 +209,101 @@ function Editor() {
   const [isSaving, setIsSaving] = useState(false)
   const [qrPreview, setQrPreview] = useState(null)
   const [uploadingItems, setUploadingItems] = useState({})
+  const [copiedUrl, setCopiedUrl] = useState(null)
+
+  const handleCopyLink = async (url) => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedUrl(url)
+      setTimeout(() => setCopiedUrl(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy link: ', err)
+    }
+  }
+
+  const handleDownloadPdf = (qr) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const pageHeight = doc.internal.pageSize.getHeight()
+
+      // Header background decoration (light gray banner)
+      doc.setFillColor(248, 249, 250)
+      doc.rect(0, 0, pageWidth, 65, 'F')
+
+      // Main header line
+      doc.setDrawColor(220, 252, 231) // light green border
+      doc.setLineWidth(1)
+      doc.line(0, 65, pageWidth, 65)
+
+      // Brand / Restaurant Name
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(24)
+      doc.setTextColor(18, 18, 18)
+      const restaurantName = qrPreview.restaurantName || 'Untitled Restaurant'
+      doc.text(restaurantName.toUpperCase(), pageWidth / 2, 32, { align: 'center' })
+
+      // Menu Title
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(14)
+      doc.setTextColor(115, 115, 115)
+      const menuTitle = qrPreview.menuTitle || 'Digital Menu'
+      doc.text(menuTitle, pageWidth / 2, 44, { align: 'center' })
+
+      // Table indicator / QR code title
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(32)
+      doc.setTextColor(22, 163, 74) // brand green: #16a34a
+      const tableText = qr.table ? `TABLE ${qr.table}` : 'MAIN MENU'
+      doc.text(tableText, pageWidth / 2, 95, { align: 'center' })
+
+      // QR Code Box
+      const qrSize = 100 // 100mm
+      const qrX = (pageWidth - qrSize) / 2
+      const qrY = 110
+      
+      // Draw background board for the QR
+      doc.setFillColor(255, 255, 255)
+      doc.setDrawColor(229, 231, 235) // border neutral-200
+      doc.setLineWidth(0.5)
+      // Draw card border slightly larger than QR code
+      doc.roundedRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 4, 4, 'FD')
+
+      // Add QR Image
+      doc.addImage(qr.qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
+
+      // Instructions block
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(16)
+      doc.setTextColor(18, 18, 18)
+      doc.text('SCAN THE QR CODE', pageWidth / 2, 245, { align: 'center' })
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(11)
+      doc.setTextColor(82, 82, 82)
+      doc.text('Scan with your smartphone camera to view the menu & place your order.', pageWidth / 2, 253, { align: 'center' })
+
+      // URL at the bottom
+      doc.setFont('courier', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(163, 163, 163)
+      doc.text(qr.url, pageWidth / 2, 275, { align: 'center' })
+
+      // Save PDF
+      const filename = qr.table
+        ? `${restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-table-${qr.table}.pdf`
+        : `${restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-menu.pdf`
+      doc.save(filename)
+    } catch (err) {
+      console.error('Failed to generate PDF: ', err)
+      alert('Error generating PDF. Please try again.')
+    }
+  }
 
   // Restaurant / settings state
   const [restaurantSettings, setRestaurantSettings] = useState(null)
@@ -1048,14 +1144,14 @@ function Editor() {
                 </div>
                 <button onClick={closeQrPreview} className="btn-ghost p-2 flex-shrink-0"><IconX /></button>
               </div>
-              <div className="flex justify-center rounded-2xl border p-5" style={{ background: '#f8f8f8', borderColor: '#e5e7eb' }}>
+              <div className="flex flex-wrap gap-6 justify-center rounded-2xl border p-6" style={{ background: '#f8f8f8', borderColor: '#e5e7eb' }}>
                 {
                   qrPreview.qrs?.map((qr) => (
                     <div
                       key={qr.url}
-                      className="mb-6 text-center"
+                      className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm text-center flex flex-col items-center justify-between w-full max-w-[16rem]"
                     >
-                      <h3 className="mb-2 font-bold text-neutral-900">
+                      <h3 className="mb-3 font-bold text-neutral-900 text-sm">
                         {
                           qr.table
                           ?
@@ -1073,9 +1169,43 @@ function Editor() {
                           :
                           "Menu QR code"
                         }
-                        className="mx-auto h-[min(70vw,22rem)] w-[min(70vw,22rem)] rounded-xl"
+                        className="mx-auto w-full max-w-[12rem] aspect-square object-contain rounded-xl"
                       />
-                      <p className="mt-2 break-all text-xs text-neutral-400">
+
+                      {/* Action buttons (Copy and Download) */}
+                      <div className="flex items-center justify-center gap-2 mt-4">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyLink(qr.url)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 shadow-sm transition hover:bg-neutral-50 hover:text-green-600 hover:border-green-200 focus:outline-none"
+                          title="Copy Link"
+                        >
+                          {copiedUrl === qr.url ? (
+                            <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadPdf(qr)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 shadow-sm transition hover:bg-neutral-50 hover:text-green-600 hover:border-green-200 focus:outline-none"
+                          title="Download PDF"
+                        >
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <p className="mt-3 break-all text-[11px] text-neutral-400 font-mono">
                         {qr.url}
                       </p>
                     </div>
@@ -1122,6 +1252,12 @@ function MenuViewer() {
   const [deviceId] = useState(() => getDeviceId())
 
   const orderStorageKey = id ? `qr-order-${id}` : null
+
+  const clearOrder = useCallback(() => {
+    if (orderStorageKey) window.localStorage.removeItem(orderStorageKey)
+    setActiveOrderId(null)
+    setOrderData(null)
+  }, [orderStorageKey])
 
   const subtotal = useMemo(()=>{
 
@@ -1246,10 +1382,14 @@ function MenuViewer() {
   useEffect(() => {
     if (!menuData?.restaurantId || !activeOrderId) { setOrderData(null); return }
     const unsubscribe = subscribeToRestaurantOrder(menuData.restaurantId, activeOrderId, (order) => {
-      setOrderData(order)
+      if (order === null) {
+        clearOrder()
+      } else {
+        setOrderData(order)
+      }
     })
     return () => { unsubscribe() }
-  }, [menuData, activeOrderId])
+  }, [menuData, activeOrderId, clearOrder])
 
   const allowOnlineOrders = Boolean(restaurantSettings?.allowOnlineOrders)
   const rawOrderStatus = (orderData?.status || '').trim().toLowerCase()
@@ -1421,11 +1561,7 @@ function MenuViewer() {
   setIsPlacingOrder(false)
 }
 
-  const clearOrder = () => {
-    if (orderStorageKey) window.localStorage.removeItem(orderStorageKey)
-    setActiveOrderId(null)
-    setOrderData(null)
-  }
+
 
   const handleCancelOrder = async () => {
     if (!menuData?.restaurantId || !activeOrderId) return
