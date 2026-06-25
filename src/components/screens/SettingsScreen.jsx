@@ -12,6 +12,8 @@ export default function SettingsScreen({
   handleCurrencyChange,
   handleRestaurantNameChange,
   handleSlugChange,
+  handleRestaurantAddressChange,
+  handleRestaurantPhoneChange,
   savedMenus,
   setDeleteConfirmId,
   tableTrackingEnabled,
@@ -21,8 +23,13 @@ export default function SettingsScreen({
 }) {
   const [editingName, setEditingName] = useState(false)
   const [editingSlug, setEditingSlug] = useState(false)
+  const [editingAddress, setEditingAddress] = useState(false)
+  const [editingPhone, setEditingPhone] = useState(false)
+  
   const [tempName, setTempName] = useState(restaurantSettings?.name || '')
   const [tempSlug, setTempSlug] = useState(restaurantSettings?.slug || '')
+  const [tempAddress, setTempAddress] = useState(restaurantSettings?.address || '')
+  const [tempPhone, setTempPhone] = useState(restaurantSettings?.phone || '')
 
   const handleSaveName = async () => {
     if (tempName.trim()) {
@@ -38,6 +45,16 @@ export default function SettingsScreen({
     }
   }
 
+  const handleSaveAddress = async () => {
+    await handleRestaurantAddressChange(tempAddress.trim())
+    setEditingAddress(false)
+  }
+
+  const handleSavePhone = async () => {
+    await handleRestaurantPhoneChange(tempPhone.trim())
+    setEditingPhone(false)
+  }
+
   const handleCancelName = () => {
     setTempName(restaurantSettings?.name || '')
     setEditingName(false)
@@ -46,6 +63,16 @@ export default function SettingsScreen({
   const handleCancelSlug = () => {
     setTempSlug(restaurantSettings?.slug || '')
     setEditingSlug(false)
+  }
+
+  const handleCancelAddress = () => {
+    setTempAddress(restaurantSettings?.address || '')
+    setEditingAddress(false)
+  }
+
+  const handleCancelPhone = () => {
+    setTempPhone(restaurantSettings?.phone || '')
+    setEditingPhone(false)
   }
   return (
     <div className="p-6 sm:p-8 max-w-2xl">
@@ -257,6 +284,88 @@ export default function SettingsScreen({
                 className="font-mono text-sm text-neutral-700 hover:text-green-600 transition disabled:opacity-60"
               >
                 {restaurantSettings?.slug || '—'}
+              </button>
+            )}
+          </div>
+
+          {/* Restaurant Address */}
+          <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span className="text-sm font-medium text-neutral-600">Address</span>
+            {editingAddress ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={tempAddress}
+                  onChange={(e) => setTempAddress(e.target.value)}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 px-2 py-1 text-sm outline-none transition focus:border-green-500"
+                  placeholder="Enter address"
+                />
+                <button
+                  onClick={handleSaveAddress}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelAddress}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setTempAddress(restaurantSettings?.address || '')
+                  setEditingAddress(true)
+                }}
+                disabled={isRestaurantLoading || isRestaurantUpdating}
+                className="text-sm font-medium text-neutral-900 hover:text-green-600 transition disabled:opacity-60 text-right max-w-[200px] truncate"
+              >
+                {restaurantSettings?.address || '—'}
+              </button>
+            )}
+          </div>
+
+          {/* Restaurant Phone */}
+          <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span className="text-sm font-medium text-neutral-600">Phone Number</span>
+            {editingPhone ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={tempPhone}
+                  onChange={(e) => setTempPhone(e.target.value)}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 px-2 py-1 text-sm outline-none transition focus:border-green-500"
+                  placeholder="Enter phone number"
+                />
+                <button
+                  onClick={handleSavePhone}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelPhone}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setTempPhone(restaurantSettings?.phone || '')
+                  setEditingPhone(true)
+                }}
+                disabled={isRestaurantLoading || isRestaurantUpdating}
+                className="text-sm font-medium text-neutral-900 hover:text-green-600 transition disabled:opacity-60"
+              >
+                {restaurantSettings?.phone || '—'}
               </button>
             )}
           </div>

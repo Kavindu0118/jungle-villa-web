@@ -49,7 +49,16 @@ export default function DashboardScreen({
         {[
           { label: 'Saved Menus', value: savedMenus.length, color: '#0ea5e9' },
           { label: 'Sections', value: draftMenu ? draftMenu.sections.length : (savedMenus[0]?.sections?.length || 0), color: '#f59e0b' },
-          { label: 'Items', value: draftItemCount || (savedMenus[0]?.sections?.reduce((c, s) => c + s.items.length, 0) || 0), color: '#8b5cf6' },
+          { 
+            label: 'Items', 
+            value: draftItemCount || (savedMenus[0]?.sections?.reduce((c, s) => {
+              if (s.subcategories && s.subcategories.length > 0) {
+                return c + s.subcategories.reduce((subCount, sub) => subCount + (sub.items?.length || 0), 0)
+              }
+              return c + (s.items?.length || 0)
+            }, 0) || 0), 
+            color: '#8b5cf6' 
+          },
         ].map((stat) => (
           <div key={stat.label} className="stat-card">
             <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">{stat.label}</p>

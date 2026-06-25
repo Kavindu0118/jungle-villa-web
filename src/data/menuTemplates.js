@@ -32,17 +32,44 @@ export const menuTemplates = [
       {
         id: 'coffee',
         title: 'Coffee',
-        items: [
-          item('coffee-1', 'Espresso', 'Single shot, rich and bold', '$3.50'),
-          item('coffee-2', 'Cappuccino', 'Foamed milk with cocoa finish', '$5.00'),
+        subcategories: [
+          {
+            id: 'coffee-hot',
+            title: 'Hot Drinks',
+            items: [
+              item('coffee-1', 'Espresso', 'Single shot, rich and bold', '$3.50'),
+              item('coffee-2', 'Cappuccino', 'Foamed milk with cocoa finish', '$5.00'),
+            ],
+          },
+          {
+            id: 'coffee-cold',
+            title: 'Iced Coffee',
+            items: [
+              item('coffee-3', 'Iced Latte', 'Espresso over ice with chilled milk', '$5.50'),
+              item('coffee-4', 'Cold Brew', 'Steeped 18 hours, served over ice', '$4.50'),
+            ],
+          },
         ],
       },
       {
         id: 'bakes',
         title: 'Bakery',
-        items: [
-          item('bakes-1', 'Butter Croissant', 'Baked fresh each morning', '$4.50'),
-          item('bakes-2', 'Banana Bread', 'Toasted with sea salt butter', '$4.00'),
+        subcategories: [
+          {
+            id: 'bakes-pastries',
+            title: 'Pastries',
+            items: [
+              item('bakes-1', 'Butter Croissant', 'Flaky, buttery French pastry', '$4.50'),
+              item('bakes-3', 'Chocolate Croissant', 'Filled with dark Belgian chocolate', '$5.00'),
+            ],
+          },
+          {
+            id: 'bakes-loaves',
+            title: 'Loaves & Cakes',
+            items: [
+              item('bakes-2', 'Banana Bread', 'Toasted, served with sea salt butter', '$4.00'),
+            ],
+          },
         ],
       },
     ],
@@ -57,24 +84,56 @@ export const menuTemplates = [
       {
         id: 'starters',
         title: 'Starters',
-        items: [
-          item('starters-1', 'Smoked Tomato Soup', 'Herb oil and garlic crumb', '$8.00'),
-          item('starters-2', 'Crispy Calamari', 'Lemon aioli and parsley', '$12.00'),
+        subcategories: [
+          {
+            id: 'starters-soups',
+            title: 'Soups',
+            items: [
+              item('starters-1', 'Smoked Tomato Soup', 'Herb oil and garlic crumb', '$8.00'),
+            ],
+          },
+          {
+            id: 'starters-apps',
+            title: 'Salads & Appetizers',
+            items: [
+              item('starters-2', 'Crispy Calamari', 'Lemon aioli and parsley', '$12.00'),
+              item('starters-3', 'Caesar Salad', 'Romaine, parmesan, croutons, creamy dressing', '$10.00'),
+            ],
+          },
         ],
       },
       {
         id: 'mains',
         title: 'Mains',
-        items: [
-          item('mains-1', 'Seared Salmon', 'Quinoa, charred greens, citrus butter', '$22.00'),
-          item('mains-2', 'Truffle Mushroom Risotto', 'Parmesan and cracked pepper', '$19.00'),
+        subcategories: [
+          {
+            id: 'mains-seafood',
+            title: 'Seafood & Grill',
+            items: [
+              item('mains-1', 'Seared Salmon', 'Quinoa, charred greens, citrus butter', '$22.00'),
+            ],
+          },
+          {
+            id: 'mains-pasta',
+            title: 'Pasta & Grains',
+            items: [
+              item('mains-2', 'Truffle Mushroom Risotto', 'Parmesan and cracked pepper', '$19.00'),
+            ],
+          },
         ],
       },
       {
         id: 'desserts',
         title: 'Desserts',
-        items: [
-          item('desserts-1', 'Dark Chocolate Tart', 'Vanilla creme and berries', '$9.00'),
+        subcategories: [
+          {
+            id: 'desserts-sweet',
+            title: 'Sweet Endings',
+            items: [
+              item('desserts-1', 'Dark Chocolate Tart', 'Vanilla creme and berries', '$9.00'),
+              item('desserts-2', 'Warm Apple Galette', 'Caramel drizzle, vanilla bean ice cream', '$10.50'),
+            ],
+          },
         ],
       },
     ],
@@ -89,25 +148,56 @@ export const menuTemplates = [
       {
         id: 'snacks',
         title: 'Snacks',
-        items: [
-          item('snacks-1', 'Loaded Fries', 'Cheddar sauce and chive', '$7.00'),
-          item('snacks-2', 'Chicken Sliders', 'Two mini brioche sliders', '$9.50'),
+        subcategories: [
+          {
+            id: 'snacks-fries',
+            title: 'Fries & Bites',
+            items: [
+              item('snacks-1', 'Loaded Fries', 'Cheddar sauce and chive', '$7.00'),
+              item('snacks-3', 'Onion Rings', 'Crispy beer-battered rings', '$6.00'),
+            ],
+          },
+          {
+            id: 'snacks-sliders',
+            title: 'Sliders',
+            items: [
+              item('snacks-2', 'Chicken Sliders', 'Two mini brioche sliders', '$9.50'),
+            ],
+          },
         ],
       },
       {
         id: 'bowls',
         title: 'Power Bowls',
-        items: [
-          item('bowls-1', 'Teriyaki Tofu Bowl', 'Brown rice, bok choy, sesame', '$11.00'),
-          item('bowls-2', 'Chicken Grain Bowl', 'Avocado, greens, spicy mayo', '$12.50'),
+        subcategories: [
+          {
+            id: 'bowls-rice',
+            title: 'Warm Bowls',
+            items: [
+              item('bowls-1', 'Teriyaki Tofu Bowl', 'Brown rice, bok choy, sesame', '$11.00'),
+              item('bowls-2', 'Chicken Grain Bowl', 'Avocado, greens, spicy mayo', '$12.50'),
+            ],
+          },
         ],
       },
       {
         id: 'drinks',
         title: 'Drinks',
-        items: [
-          item('drinks-1', 'Sparkling Lime', 'Fresh citrus and mint', '$3.50'),
-          item('drinks-2', 'Cold Brew', 'Single-origin beans', '$4.25'),
+        subcategories: [
+          {
+            id: 'drinks-cold',
+            title: 'Infusions & Sodas',
+            items: [
+              item('drinks-1', 'Sparkling Lime', 'Fresh citrus and mint', '$3.50'),
+            ],
+          },
+          {
+            id: 'drinks-brew',
+            title: 'Cold Coffee',
+            items: [
+              item('drinks-2', 'Cold Brew', 'Single-origin beans', '$4.25'),
+            ],
+          },
         ],
       },
     ],

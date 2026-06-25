@@ -62,45 +62,186 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
   if (!menu) return null
   const canOrder = orderingEnabled && typeof onAddToCart === 'function'
 
+  const [activeSectionId, setActiveSectionId] = useState('all')
+  const [activeSubcategoryId, setActiveSubcategoryId] = useState('all')
+
   const formatPrice = (price) => {
     if (!price) return '-'
     const cleanPrice = String(price).replace(/[^0-9.]/g, '')
     return cleanPrice ? `${currencySymbol}${cleanPrice}` : '-'
   }
 
+  const handleSectionSelect = (sectionId) => {
+    setActiveSectionId(sectionId)
+    setActiveSubcategoryId('all')
+  }
+
+  const renderFilterTabs = () => {
+    if (!menu.sections || menu.sections.length === 0) return null
+
+    const selectedSection = menu.sections.find((s) => s.id === activeSectionId)
+    const activeSectionSubs = selectedSection?.subcategories || []
+
+    return (
+      <div className="mb-6 flex flex-col gap-3">
+        {/* Category Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => handleSectionSelect('all')}
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+              activeSectionId === 'all'
+                ? 'bg-neutral-900 text-white shadow-sm scale-[1.02]'
+                : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
+            }`}
+          >
+            All Categories
+          </button>
+          {menu.sections.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => handleSectionSelect(section.id)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+                activeSectionId === section.id
+                  ? 'bg-green-600 text-white shadow-sm scale-[1.02]'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
+              }`}
+            >
+              {section.title || 'Untitled Section'}
+            </button>
+          ))}
+        </div>
+
+        {/* Subcategory Tabs */}
+        {activeSectionId !== 'all' && activeSectionSubs.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-t border-dashed border-neutral-200 pt-3">
+            <button
+              type="button"
+              onClick={() => setActiveSubcategoryId('all')}
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                activeSubcategoryId === 'all'
+                  ? 'bg-neutral-800 text-white shadow-sm'
+                  : 'bg-neutral-50 text-neutral-500 border border-neutral-200/40 hover:bg-neutral-100'
+              }`}
+            >
+              All {selectedSection.title}
+            </button>
+            {activeSectionSubs.map((sub) => (
+              <button
+                key={sub.id}
+                type="button"
+                onClick={() => setActiveSubcategoryId(sub.id)}
+                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                  activeSubcategoryId === sub.id
+                    ? 'bg-green-100 text-green-800 border border-green-200 font-semibold'
+                    : 'bg-neutral-50 text-neutral-500 border border-neutral-200/40 hover:bg-neutral-100'
+                }`}
+              >
+                {sub.title || 'Untitled Sub'}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Filter sections and subcategories for rendering
+  const filteredSections = menu.sections.map((section) => {
+    if (activeSectionId !== 'all' && section.id !== activeSectionId) {
+      return null
+    }
+    if (section.subcategories && section.subcategories.length > 0) {
+      if (activeSubcategoryId !== 'all') {
+        return {
+          ...section,
+          subcategories: section.subcategories.filter((sub) => sub.id === activeSubcategoryId)
+        }
+      }
+    }
+    return section
+  }).filter(Boolean)
+
+  const filteredMenu = {
+    ...menu,
+    sections: filteredSections
+  }
+
+  const renderChefItem = (item) => (
+    <div key={item.id} className="border-b border-neutral-200 pb-2 last:border-none last:pb-0 flex items-start gap-4">
+      {item.imageUrl && (
+        <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded-lg border border-neutral-200 flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <p className="font-medium text-neutral-900 truncate">{item.name || 'Untitled Item'}</p>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <p className="font-mono text-sm text-neutral-800">{formatPrice(item.price)}</p>
+            {canOrder && (
+              <button type="button" onClick={() => onAddToCart(item)}
+                className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
+            )}
+          </div>
+        </div>
+        <p className="text-sm text-neutral-600 line-clamp-2">{item.description || 'No description'}</p>
+      </div>
+    </div>
+  )
+
+  const renderMinimalItem = (item) => (
+    <div key={item.id} className="flex items-start gap-3 text-sm border-b border-neutral-100 pb-2 last:border-none last:pb-0">
+      {item.imageUrl && (
+        <img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded-md border border-neutral-200 flex-shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
+            <p className="text-neutral-600">{item.description || 'No description'}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <p className="font-mono text-neutral-800">{formatPrice(item.price)}</p>
+            {canOrder && (
+              <button type="button" onClick={() => onAddToCart(item)}
+                className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   if (menu.templateId === 'chef-signature') {
     return (
       <div className="rounded-2xl border border-neutral-300 bg-neutral-100/70 p-5 sm:p-7">
-        <div className="border-b border-neutral-300 pb-4">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-600">Chef Signature Layout</p>
-          <h4 className="mt-2 text-2xl font-semibold text-neutral-900">{menu.menuTitle}</h4>
-          <p className="text-sm text-neutral-600">{menu.restaurantName || 'Untitled Restaurant'}</p>
+        <div className="border-b border-neutral-300 pb-4 mb-5">
+          <h4 className="text-2xl font-semibold text-neutral-900">{menu.restaurantName || 'Untitled Restaurant'}</h4>
+          {(menu.restaurantAddress || menu.restaurantPhone) && (
+            <div className="mt-2 text-sm text-neutral-600 space-y-0.5">
+              {menu.restaurantAddress && <p>{menu.restaurantAddress}</p>}
+              {menu.restaurantPhone && <p>{menu.restaurantPhone}</p>}
+            </div>
+          )}
         </div>
+        {renderFilterTabs()}
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          {menu.sections.map((section) => (
+          {filteredMenu.sections.map((section) => (
             <section key={section.id} className="rounded-xl border border-neutral-300 bg-white p-4">
-              <h5 className="text-lg font-semibold text-neutral-900">{section.title}</h5>
-              <div className="mt-3 space-y-3">
-                {section.items.map((item) => (
-                  <div key={item.id} className="border-b border-neutral-200 pb-2 last:border-none last:pb-0 flex items-start gap-4">
-                    {item.imageUrl && (
-                      <img src={item.imageUrl} alt={item.name} className="w-16 h-16 object-cover rounded-lg border border-neutral-200 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="font-medium text-neutral-900 truncate">{item.name || 'Untitled Item'}</p>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <p className="font-mono text-sm text-neutral-800">{formatPrice(item.price)}</p>
-                          {canOrder && (
-                            <button type="button" onClick={() => onAddToCart(item)}
-                              className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
-                          )}
-                        </div>
+              <h5 className="text-lg font-semibold text-neutral-900 border-b border-neutral-100 pb-1.5">{section.title}</h5>
+              <div className="mt-3 space-y-4">
+                {section.subcategories && section.subcategories.length > 0 ? (
+                  section.subcategories.map((sub) => (
+                    <div key={sub.id} className="space-y-2">
+                      <h6 className="text-xs font-bold uppercase tracking-wider text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded w-fit">{sub.title}</h6>
+                      <div className="space-y-3 pl-2 border-l-2 border-neutral-200">
+                        {sub.items.map((item) => renderChefItem(item))}
                       </div>
-                      <p className="text-sm text-neutral-600 line-clamp-2">{item.description || 'No description'}</p>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  section.items.map((item) => renderChefItem(item))
+                )}
               </div>
             </section>
           ))}
@@ -110,78 +251,216 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
   }
 
   if (menu.templateId === 'quick-bites') {
+    const renderQuickBitesItem = (item) => (
+      <div
+        key={item.id}
+        className="group relative flex flex-col rounded-2xl overflow-hidden bg-white border border-neutral-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+        style={{ minHeight: '200px' }}
+      >
+        {/* Item image or gradient placeholder */}
+        <div className="relative flex-shrink-0 h-36 overflow-hidden bg-gradient-to-br from-orange-50 to-amber-50">
+          {item.imageUrl ? (
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+          )}
+          {/* Price badge */}
+          <span
+            className="absolute top-2.5 right-2.5 text-xs font-bold px-2.5 py-1 rounded-full shadow-sm"
+            style={{ background: 'linear-gradient(135deg,#f97316,#ea580c)', color: '#fff', letterSpacing: '0.02em' }}
+          >
+            {formatPrice(item.price)}
+          </span>
+        </div>
+
+        {/* Item info */}
+        <div className="flex flex-col justify-between flex-1 p-3 gap-2">
+          <div>
+            <p className="font-semibold text-neutral-900 text-sm leading-tight line-clamp-1">
+              {item.name || 'Untitled Item'}
+            </p>
+            <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2 leading-relaxed">
+              {item.description || 'No description'}
+            </p>
+          </div>
+          {canOrder && (
+            <button
+              type="button"
+              onClick={() => onAddToCart(item)}
+              className="self-end w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-base transition-all duration-200 hover:scale-110 active:scale-95 shadow-md"
+              style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)' }}
+              title={`Add ${item.name || 'item'} to cart`}
+            >
+              +
+            </button>
+          )}
+        </div>
+      </div>
+    )
+
     return (
-      <div className="rounded-2xl border border-neutral-300 bg-white p-5 sm:p-7">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-600">Quick Bites Layout</p>
-        <h4 className="mt-2 text-2xl font-semibold text-neutral-900">{menu.menuTitle}</h4>
-        <p className="text-sm text-neutral-600">{menu.restaurantName || 'Untitled Restaurant'}</p>
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
-          {menu.sections.map((section) => (
-            <section key={section.id} className="rounded-xl border border-neutral-300 bg-neutral-50 p-4">
-              <h5 className="text-base font-semibold text-neutral-900">{section.title}</h5>
-              <div className="mt-3 space-y-2">
-                {section.items.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-neutral-200 bg-white overflow-hidden flex flex-col">
-                    {item.imageUrl && (
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-24 object-cover border-b border-neutral-100" />
-                    )}
-                    <div className="p-2 flex-1 flex flex-col justify-between">
-                      <div>
-                        <p className="font-medium text-neutral-900 text-sm">{item.name || 'Untitled Item'}</p>
-                        <p className="text-xs text-neutral-600 line-clamp-2">{item.description || 'No description'}</p>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <p className="font-mono text-xs text-neutral-800">{formatPrice(item.price)}</p>
-                        {canOrder && (
-                          <button type="button" onClick={() => onAddToCart(item)}
-                            className="rounded-full border border-neutral-300 px-2.5 py-1 text-[0.7rem] font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
-                        )}
-                      </div>
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: 'linear-gradient(160deg,#111827 0%,#1f2937 100%)', border: '1px solid #374151' }}
+      >
+        {/* Dark gradient header */}
+        <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
+          <h4 className="text-2xl font-bold text-white leading-tight">{menu.restaurantName || 'Untitled Restaurant'}</h4>
+          {(menu.restaurantAddress || menu.restaurantPhone) && (
+            <div className="mt-2 text-sm text-neutral-400 space-y-0.5">
+              {menu.restaurantAddress && <p>{menu.restaurantAddress}</p>}
+              {menu.restaurantPhone && <p>{menu.restaurantPhone}</p>}
+            </div>
+          )}
+
+          {/* Dark-variant filter tabs */}
+          <div className="mt-5 w-full">
+            {(() => {
+              if (!menu.sections || menu.sections.length === 0) return null
+              const selectedSection = menu.sections.find((s) => s.id === activeSectionId)
+              const activeSectionSubs = selectedSection?.subcategories || []
+              return (
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    <button
+                      type="button"
+                      onClick={() => handleSectionSelect('all')}
+                      className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200"
+                      style={
+                        activeSectionId === 'all'
+                          ? { background: '#f97316', color: '#fff', boxShadow: '0 2px 8px rgba(249,115,22,0.4)' }
+                          : { background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }
+                      }
+                    >
+                      All
+                    </button>
+                    {menu.sections.map((section) => (
+                      <button
+                        key={section.id}
+                        type="button"
+                        onClick={() => handleSectionSelect(section.id)}
+                        className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200"
+                        style={
+                          activeSectionId === section.id
+                            ? { background: '#f97316', color: '#fff', boxShadow: '0 2px 8px rgba(249,115,22,0.4)' }
+                            : { background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }
+                        }
+                      >
+                        {section.title}
+                      </button>
+                    ))}
+                  </div>
+                  {activeSectionId !== 'all' && activeSectionSubs.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubcategoryId('all')}
+                        className="flex-shrink-0 px-3.5 py-1 rounded-full text-xs font-medium transition-all duration-200"
+                        style={
+                          activeSubcategoryId === 'all'
+                            ? { background: '#16a34a', color: '#fff' }
+                            : { background: 'rgba(255,255,255,0.07)', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.1)' }
+                        }
+                      >
+                        All {selectedSection.title}
+                      </button>
+                      {activeSectionSubs.map((sub) => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => setActiveSubcategoryId(sub.id)}
+                          className="flex-shrink-0 px-3.5 py-1 rounded-full text-xs font-medium transition-all duration-200"
+                          style={
+                            activeSubcategoryId === sub.id
+                              ? { background: '#16a34a', color: '#fff' }
+                              : { background: 'rgba(255,255,255,0.07)', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.1)' }
+                          }
+                        >
+                          {sub.title}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        </div>
+
+        {/* Light card grid area */}
+        <div className="bg-neutral-50 px-5 py-5 rounded-b-2xl">
+          {filteredMenu.sections.map((section) => (
+            <div key={section.id} className="mb-6 last:mb-0">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#f97316' }} />
+                <h5 className="text-sm font-bold uppercase tracking-widest text-neutral-500">{section.title}</h5>
+                <div className="flex-1 h-px bg-neutral-200" />
+              </div>
+              {section.subcategories && section.subcategories.length > 0 ? (
+                section.subcategories.map((sub) => (
+                  <div key={sub.id} className="mb-5 last:mb-0">
+                    <p
+                      className="text-[10px] font-bold uppercase tracking-[0.15em] mb-3 px-2 py-0.5 rounded w-fit"
+                      style={{ color: '#16a34a', background: '#f0fdf4' }}
+                    >
+                      {sub.title}
+                    </p>
+                    <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
+                      {sub.items.map((item) => renderQuickBitesItem(item))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
+                ))
+              ) : (
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
+                  {section.items.map((item) => renderQuickBitesItem(item))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>
     )
   }
 
+
   return (
     <div className="rounded-2xl border border-neutral-300 bg-white p-5 sm:p-7">
-      <div className="border-b border-dashed border-neutral-300 pb-4 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-600">Minimal Cafe Layout</p>
-        <h4 className="mt-2 text-2xl font-semibold text-neutral-900">{menu.menuTitle}</h4>
-        <p className="text-sm text-neutral-600">{menu.restaurantName || 'Untitled Restaurant'}</p>
+      <div className="border-b border-dashed border-neutral-300 pb-4 text-center mb-5">
+        <h4 className="text-2xl font-semibold text-neutral-900">{menu.restaurantName || 'Untitled Restaurant'}</h4>
+        {(menu.restaurantAddress || menu.restaurantPhone) && (
+          <div className="mt-2 text-sm text-neutral-500 space-y-0.5 flex flex-col items-center">
+            {menu.restaurantAddress && <p>{menu.restaurantAddress}</p>}
+            {menu.restaurantPhone && <p>{menu.restaurantPhone}</p>}
+          </div>
+        )}
       </div>
+      {renderFilterTabs()}
       <div className="mt-5 space-y-5">
-        {menu.sections.map((section) => (
+        {filteredMenu.sections.map((section) => (
           <section key={section.id}>
             <h5 className="border-b border-neutral-300 pb-2 text-lg font-semibold text-neutral-900">{section.title}</h5>
-            <div className="mt-3 space-y-3">
-              {section.items.map((item) => (
-                <div key={item.id} className="flex items-start gap-3 text-sm border-b border-neutral-100 pb-2 last:border-none last:pb-0">
-                  {item.imageUrl && (
-                    <img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded-md border border-neutral-200 flex-shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-neutral-900">{item.name || 'Untitled Item'}</p>
-                        <p className="text-neutral-600">{item.description || 'No description'}</p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <p className="font-mono text-neutral-800">{formatPrice(item.price)}</p>
-                        {canOrder && (
-                          <button type="button" onClick={() => onAddToCart(item)}
-                            className="rounded-full border border-neutral-300 px-2.5 py-1 text-xs font-medium text-neutral-800 transition hover:border-neutral-900">Add</button>
-                        )}
-                      </div>
+            <div className="mt-3 space-y-4">
+              {section.subcategories && section.subcategories.length > 0 ? (
+                section.subcategories.map((sub) => (
+                  <div key={sub.id} className="space-y-2">
+                    <h6 className="text-xs font-bold uppercase tracking-wider text-green-700 bg-green-50 px-2 py-0.5 rounded w-fit">{sub.title}</h6>
+                    <div className="space-y-3 pl-1.5 border-l border-neutral-200">
+                      {sub.items.map((item) => renderMinimalItem(item))}
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                section.items.map((item) => renderMinimalItem(item))
+              )}
             </div>
           </section>
         ))}
@@ -512,6 +791,22 @@ function Editor() {
     setIsRestaurantUpdating(false)
   }
 
+  const handleRestaurantAddressChange = async (newAddress) => {
+    if (!restaurantId || !restaurantSettings) return
+    setRestaurantSettings((c) => ({ ...c, address: newAddress }))
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, address: newAddress })
+    setIsRestaurantUpdating(false)
+  }
+
+  const handleRestaurantPhoneChange = async (newPhone) => {
+    if (!restaurantId || !restaurantSettings) return
+    setRestaurantSettings((c) => ({ ...c, phone: newPhone }))
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, phone: newPhone })
+    setIsRestaurantUpdating(false)
+  }
+
   const handleDisplayNameChange = async (newDisplayName) => {
     if (!user) return
     setProfile((c) => ({ ...c, ownerName: newDisplayName }))
@@ -527,8 +822,15 @@ function Editor() {
   const selectedTemplate = useMemo(() => findTemplateById(selectedTemplateId), [selectedTemplateId])
   const preferredRestaurantName = useMemo(() =>
     restaurantSettings?.name?.trim() || '', [restaurantSettings])
-  const draftItemCount = useMemo(() =>
-    draftMenu ? draftMenu.sections.reduce((c, s) => c + s.items.length, 0) : 0, [draftMenu])
+  const draftItemCount = useMemo(() => {
+    if (!draftMenu) return 0
+    return draftMenu.sections.reduce((count, section) => {
+      if (section.subcategories && section.subcategories.length > 0) {
+        return count + section.subcategories.reduce((subCount, sub) => subCount + (sub.items?.length || 0), 0)
+      }
+      return count + (section.items?.length || 0)
+    }, 0)
+  }, [draftMenu])
 
   const loadTemplate = (templateId) => {
     const template = findTemplateById(templateId)
@@ -591,6 +893,114 @@ function Editor() {
       if (s.id !== sectionId) return s
       return { ...s, items: s.items.map((item) => item.id === itemId ? { ...item, [fieldName]: value } : item) }
     }))
+
+  const addSubcategory = (sectionId) => {
+    updateSectionList((sections) => sections.map((s) => {
+      if (s.id !== sectionId) return s
+      const newSub = {
+        id: createId('subcategory'),
+        title: 'New Subcategory',
+        items: [createEmptyItem()]
+      }
+      
+      // Migrate existing direct items to a "General" subcategory first if they exist
+      if (s.items && s.items.length > 0) {
+        const generalSub = {
+          id: createId('subcategory'),
+          title: 'General',
+          items: s.items
+        }
+        return {
+          ...s,
+          items: [],
+          subcategories: [generalSub, newSub]
+        }
+      }
+      
+      const existingSubs = s.subcategories || []
+      return {
+        ...s,
+        items: [],
+        subcategories: [...existingSubs, newSub]
+      }
+    }))
+  }
+
+  const removeSubcategory = (sectionId, subcategoryId) => {
+    updateSectionList((sections) => sections.map((s) => {
+      if (s.id !== sectionId) return s
+      const nextSubs = (s.subcategories || []).filter((sub) => sub.id !== subcategoryId)
+      if (nextSubs.length === 0) {
+        return {
+          ...s,
+          subcategories: [],
+          items: [createEmptyItem()]
+        }
+      }
+      return {
+        ...s,
+        subcategories: nextSubs
+      }
+    }))
+  }
+
+  const updateSubcategoryTitle = (sectionId, subcategoryId, title) => {
+    updateSectionList((sections) => sections.map((s) => {
+      if (s.id !== sectionId) return s
+      return {
+        ...s,
+        subcategories: (s.subcategories || []).map((sub) =>
+          sub.id === subcategoryId ? { ...sub, title } : sub
+        )
+      }
+    }))
+  }
+
+  const addSubcategoryItem = (sectionId, subcategoryId) => {
+    updateSectionList((sections) => sections.map((s) => {
+      if (s.id !== sectionId) return s
+      return {
+        ...s,
+        subcategories: (s.subcategories || []).map((sub) =>
+          sub.id === subcategoryId
+            ? { ...sub, items: [...sub.items, createEmptyItem()] }
+            : sub
+        )
+      }
+    }))
+  }
+
+  const removeSubcategoryItem = (sectionId, subcategoryId, itemId) => {
+    updateSectionList((sections) => sections.map((s) => {
+      if (s.id !== sectionId) return s
+      return {
+        ...s,
+        subcategories: (s.subcategories || []).map((sub) => {
+          if (sub.id !== subcategoryId) return sub
+          if (sub.items.length <= 1) return sub
+          return { ...sub, items: sub.items.filter((item) => item.id !== itemId) }
+        })
+      }
+    }))
+  }
+
+  const updateSubcategoryItemField = (sectionId, subcategoryId, itemId, fieldName, value) => {
+    updateSectionList((sections) => sections.map((s) => {
+      if (s.id !== sectionId) return s
+      return {
+        ...s,
+        subcategories: (s.subcategories || []).map((sub) => {
+          if (sub.id !== subcategoryId) return sub
+          return {
+            ...sub,
+            items: sub.items.map((item) =>
+              item.id === itemId ? { ...item, [fieldName]: value } : item
+            )
+          }
+        })
+      }
+    }))
+  }
 
   const saveMenu = async () => {
     if (!draftMenu) { setSaveStatus('Pick a template first.'); return }
@@ -741,230 +1151,311 @@ function Editor() {
 
 
   // ── Menu Builder Drawer ───────────────────────────────────────────────────
-  const BuilderDrawer = () => (
-    <>
-      <div className="drawer-overlay" onClick={() => setShowBuilder(false)} />
-      <div className="drawer-panel">
-        {/* Drawer Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-neutral-100 bg-white px-6 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Menu Builder</p>
-            <h2 className="mt-0.5 text-lg font-bold text-neutral-900">
-              {selectedTemplate ? selectedTemplate.label : 'Select a Template'}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={saveMenu}
-              disabled={!draftMenu || isSaving}
-              className="btn-green"
-            >
-              {isSaving ? 'Saving…' : 'Save Menu'}
-            </button>
-            <button onClick={() => setShowBuilder(false)} className="btn-ghost p-2">
-              <IconX />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 flex flex-col gap-6">
-          {/* Status bar */}
-          <div className="rounded-xl border px-4 py-2.5 text-sm" style={{ borderColor: '#dcfce7', background: '#f0fdf4', color: '#15803d' }}>
-            {saveStatus}
-          </div>
-
-          {/* Draft form */}
-          {draftMenu && (
-            <div className="flex flex-col gap-5">
-              {/* Basic fields */}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Restaurant Name</span>
-                  <input
-                    value={draftMenu.restaurantName}
-                    onChange={(e) => updateDraft((d) => ({ ...d, restaurantName: e.target.value }))}
-                    className="input-field"
-                    placeholder="Name of restaurant"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Menu Title</span>
-                  <input
-                    value={draftMenu.menuTitle}
-                    onChange={(e) => updateDraft((d) => ({ ...d, menuTitle: e.target.value }))}
-                    className="input-field"
-                    placeholder="e.g. Dinner Menu"
-                  />
-                </label>
+  const BuilderDrawer = () => {
+    const renderItemRow = (sectionId, subcategoryId, item) => {
+      const isUploading = uploadingItems[item.id]
+      const handleFieldChange = (field, val) => {
+        if (subcategoryId) {
+          updateSubcategoryItemField(sectionId, subcategoryId, item.id, field, val)
+        } else {
+          updateItemField(sectionId, item.id, field, val)
+        }
+      }
+      const handleRemove = () => {
+        if (subcategoryId) {
+          removeSubcategoryItem(sectionId, subcategoryId, item.id)
+        } else {
+          removeItem(sectionId, item.id)
+        }
+      }
+      
+      return (
+        <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 sm:flex-row sm:items-center">
+          {/* Image Upload/Preview */}
+          <div className="flex-shrink-0 flex items-center justify-center">
+            {item.imageUrl ? (
+              <div className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-200">
+                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => handleFieldChange('imageUrl', '')}
+                  className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  title="Remove image"
+                >
+                  <IconTrash className="w-4 h-4" />
+                </button>
               </div>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Menu Notes</span>
-                <textarea
-                  value={draftMenu.notes}
-                  onChange={(e) => updateDraft((d) => ({ ...d, notes: e.target.value }))}
-                  rows={2}
-                  className="input-field"
-                  placeholder="Optional details, timings, or highlights"
-                />
+            ) : (
+              <label 
+                className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition ${
+                  isUploading 
+                    ? 'border-neutral-300 bg-neutral-50' 
+                    : !isSupabaseConfigured || !restaurantId
+                      ? 'border-neutral-200 bg-neutral-50/50 cursor-not-allowed opacity-50'
+                      : 'border-neutral-300 hover:border-green-500 bg-neutral-50/50 hover:bg-neutral-50'
+                }`}
+                title={
+                  !isSupabaseConfigured 
+                    ? "Supabase not configured" 
+                    : !restaurantId 
+                      ? "Onboarding not complete" 
+                      : "Upload image (up to 1MB)"
+                }
+              >
+                {isUploading ? (
+                  <span className="text-[10px] text-neutral-500 animate-pulse font-medium">Uploading...</span>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="text-[9px] text-neutral-400 font-semibold mt-0.5">Add Image</span>
+                  </>
+                )}
+                {isSupabaseConfigured && restaurantId && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={isUploading}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      if (file.size > 1024 * 1024) {
+                        alert('Image size exceeds 1 MB limit. Please upload a smaller image.')
+                        return
+                      }
+                      try {
+                        setUploadingItems(prev => ({ ...prev, [item.id]: true }))
+                        const url = await uploadMenuItemImage(restaurantId, item.id, file)
+                        handleFieldChange('imageUrl', url)
+                      } catch (err) {
+                        alert(err.message || 'Failed to upload image')
+                      } finally {
+                        setUploadingItems(prev => ({ ...prev, [item.id]: false }))
+                      }
+                    }}
+                  />
+                )}
               </label>
+            )}
+          </div>
 
-              {/* Sections */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-700">Sections & Items</p>
-                    {!isSupabaseConfigured && (
-                      <p className="text-xs text-amber-600 font-medium mt-0.5">
-                        ⚠️ Supabase credentials missing. Image uploads are disabled.
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addSection}
-                    className="btn-ghost flex items-center gap-1 text-xs"
-                  >
-                    <IconPlus /> Add Section
-                  </button>
+          {/* Inputs */}
+          <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-[1.5fr_2fr_1fr]">
+            <input value={item.name} onChange={(e) => handleFieldChange('name', e.target.value)}
+              placeholder="Item name" className="input-field text-sm" />
+            <input value={item.description} onChange={(e) => handleFieldChange('description', e.target.value)}
+              placeholder="Description" className="input-field text-sm" />
+            <div className="input-wrapper">
+              <span className="text-sm font-medium text-neutral-500 mr-1.5 whitespace-nowrap">{currencySymbol}</span>
+              <input 
+                value={item.price} 
+                onChange={(e) => {
+                  let val = e.target.value.replace(/[^0-9.]/g, '')
+                  const parts = val.split('.')
+                  if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('')
+                  handleFieldChange('price', val)
+                }}
+                placeholder="0.00" 
+              />
+            </div>
+          </div>
+
+          <button type="button" onClick={handleRemove}
+            className="rounded-lg border border-neutral-200 px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600 self-stretch sm:self-auto flex items-center justify-center">
+            ×
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <>
+        <div className="drawer-overlay" onClick={() => setShowBuilder(false)} />
+        <div className="drawer-panel">
+          {/* Drawer Header */}
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-neutral-100 bg-white px-6 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Menu Builder</p>
+              <h2 className="mt-0.5 text-lg font-bold text-neutral-900">
+                {selectedTemplate ? selectedTemplate.label : 'Select a Template'}
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={saveMenu}
+                disabled={!draftMenu || isSaving}
+                className="btn-green"
+              >
+                {isSaving ? 'Saving…' : 'Save Menu'}
+              </button>
+              <button onClick={() => setShowBuilder(false)} className="btn-ghost p-2">
+                <IconX />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 flex flex-col gap-6">
+            {/* Status bar */}
+            <div className="rounded-xl border px-4 py-2.5 text-sm" style={{ borderColor: '#dcfce7', background: '#f0fdf4', color: '#15803d' }}>
+              {saveStatus}
+            </div>
+
+            {/* Draft form */}
+            {draftMenu && (
+              <div className="flex flex-col gap-5">
+                {/* Basic fields */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Restaurant Name</span>
+                    <input
+                      value={draftMenu.restaurantName}
+                      onChange={(e) => updateDraft((d) => ({ ...d, restaurantName: e.target.value }))}
+                      className="input-field"
+                      placeholder="Name of restaurant"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Menu Title</span>
+                    <input
+                      value={draftMenu.menuTitle}
+                      onChange={(e) => updateDraft((d) => ({ ...d, menuTitle: e.target.value }))}
+                      className="input-field"
+                      placeholder="e.g. Dinner Menu"
+                    />
+                  </label>
                 </div>
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Menu Notes</span>
+                  <textarea
+                    value={draftMenu.notes}
+                    onChange={(e) => updateDraft((d) => ({ ...d, notes: e.target.value }))}
+                    rows={2}
+                    className="input-field"
+                    placeholder="Optional details, timings, or highlights"
+                  />
+                </label>
 
-                <div className="flex flex-col gap-4">
-                  {draftMenu.sections.map((section) => (
-                    <article key={section.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <input
-                          value={section.title}
-                          onChange={(e) => updateSectionField(section.id, e.target.value)}
-                          className="input-field text-sm font-semibold"
-                          style={{ background: 'white' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeSection(section.id)}
-                          className="flex-shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600"
-                        >
-                          Remove
-                        </button>
-                      </div>
+                {/* Sections */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-700">Sections & Items</p>
+                      {!isSupabaseConfigured && (
+                        <p className="text-xs text-amber-600 font-medium mt-0.5">
+                          ⚠️ Supabase credentials missing. Image uploads are disabled.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addSection}
+                      className="btn-ghost flex items-center gap-1 text-xs"
+                    >
+                      <IconPlus /> Add Section
+                    </button>
+                  </div>
 
-                      <div className="flex flex-col gap-2">
-                        {section.items.map((item) => {
-                          const isUploading = uploadingItems[item.id]
-                          return (
-                            <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 sm:flex-row sm:items-center">
-                              {/* Image Upload/Preview */}
-                              <div className="flex-shrink-0 flex items-center justify-center">
-                                {item.imageUrl ? (
-                                  <div className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-200">
-                                    <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                                    <button
-                                      type="button"
-                                      onClick={() => updateItemField(section.id, item.id, 'imageUrl', '')}
-                                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                      title="Remove image"
-                                    >
-                                      <IconTrash className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <label 
-                                    className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition ${
-                                      isUploading 
-                                        ? 'border-neutral-300 bg-neutral-50' 
-                                        : !isSupabaseConfigured || !restaurantId
-                                          ? 'border-neutral-200 bg-neutral-50/50 cursor-not-allowed opacity-50'
-                                          : 'border-neutral-300 hover:border-green-500 bg-neutral-50/50 hover:bg-neutral-50'
-                                    }`}
-                                    title={
-                                      !isSupabaseConfigured 
-                                        ? "Supabase not configured" 
-                                        : !restaurantId 
-                                          ? "Onboarding not complete" 
-                                          : "Upload image (up to 1MB)"
-                                    }
-                                  >
-                                    {isUploading ? (
-                                      <span className="text-[10px] text-neutral-500 animate-pulse font-medium">Uploading...</span>
-                                    ) : (
-                                      <>
-                                        <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                                        </svg>
-                                        <span className="text-[9px] text-neutral-400 font-semibold mt-0.5">Add Image</span>
-                                      </>
-                                    )}
-                                    {isSupabaseConfigured && restaurantId && (
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        disabled={isUploading}
-                                        onChange={async (e) => {
-                                          const file = e.target.files?.[0]
-                                          if (!file) return
-                                          if (file.size > 1024 * 1024) {
-                                            alert('Image size exceeds 1 MB limit. Please upload a smaller image.')
-                                            return
-                                          }
-                                          try {
-                                            setUploadingItems(prev => ({ ...prev, [item.id]: true }))
-                                            const url = await uploadMenuItemImage(restaurantId, item.id, file)
-                                            updateItemField(section.id, item.id, 'imageUrl', url)
-                                          } catch (err) {
-                                            alert(err.message || 'Failed to upload image')
-                                          } finally {
-                                            setUploadingItems(prev => ({ ...prev, [item.id]: false }))
-                                          }
-                                        }}
-                                      />
-                                    )}
-                                  </label>
-                                )}
-                              </div>
+                  <div className="flex flex-col gap-4">
+                    {draftMenu.sections.map((section) => (
+                      <article key={section.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
+                        {/* Section Header */}
+                        <div className="mb-3 flex items-center gap-2">
+                          <input
+                            value={section.title}
+                            onChange={(e) => updateSectionField(section.id, e.target.value)}
+                            className="input-field text-sm font-semibold"
+                            style={{ background: 'white' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSection(section.id)}
+                            className="flex-shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600"
+                          >
+                            Remove
+                          </button>
+                        </div>
 
-                              {/* Inputs */}
-                              <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-[1.5fr_2fr_1fr]">
-                                <input value={item.name} onChange={(e) => updateItemField(section.id, item.id, 'name', e.target.value)}
-                                  placeholder="Item name" className="input-field text-sm" />
-                                <input value={item.description} onChange={(e) => updateItemField(section.id, item.id, 'description', e.target.value)}
-                                  placeholder="Description" className="input-field text-sm" />
-                                <div className="input-wrapper">
-                                  <span className="text-sm font-medium text-neutral-500 mr-1.5 whitespace-nowrap">{currencySymbol}</span>
-                                  <input 
-                                    value={item.price} 
-                                    onChange={(e) => {
-                                      let val = e.target.value.replace(/[^0-9.]/g, '');
-                                      const parts = val.split('.');
-                                      if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                                      updateItemField(section.id, item.id, 'price', val);
-                                    }}
-                                    placeholder="0.00" 
+                        {/* Subcategories or direct items */}
+                        {section.subcategories && section.subcategories.length > 0 ? (
+                          <div className="flex flex-col gap-4 pl-4 border-l-2 border-green-200 mt-2">
+                            {section.subcategories.map((sub) => (
+                              <div key={sub.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 shadow-sm">
+                                {/* Subcategory Header */}
+                                <div className="mb-3 flex items-center justify-between gap-2">
+                                  <input
+                                    value={sub.title}
+                                    onChange={(e) => updateSubcategoryTitle(section.id, sub.id, e.target.value)}
+                                    className="input-field text-xs font-bold uppercase tracking-wider text-neutral-600 bg-neutral-50/50 w-full max-w-[250px]"
+                                    placeholder="Subcategory Title"
                                   />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSubcategory(section.id, sub.id)}
+                                    className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 hover:border-red-200 transition"
+                                  >
+                                    Remove Sub
+                                  </button>
                                 </div>
+                                
+                                {/* Subcategory Items */}
+                                <div className="flex flex-col gap-2">
+                                  {sub.items.map((item) => renderItemRow(section.id, sub.id, item))}
+                                </div>
+                                
+                                {/* Add Item to Subcategory */}
+                                <button
+                                  type="button"
+                                  onClick={() => addSubcategoryItem(section.id, sub.id)}
+                                  className="mt-3 flex items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:border-green-400 hover:text-green-700"
+                                >
+                                  <IconPlus /> Add Item
+                                </button>
                               </div>
-
-                              <button type="button" onClick={() => removeItem(section.id, item.id)}
-                                className="rounded-lg border border-neutral-200 px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600 self-stretch sm:self-auto flex items-center justify-center">
-                                ×
+                            ))}
+                            
+                            {/* Add Subcategory */}
+                            <button
+                              type="button"
+                              onClick={() => addSubcategory(section.id)}
+                              className="self-start mt-1 flex items-center gap-1 rounded-lg border border-dashed border-green-300 bg-green-50/50 px-3 py-2 text-xs font-medium text-green-700 transition hover:bg-green-50 hover:border-green-400"
+                            >
+                              <IconPlus /> Add Subcategory
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Direct Items */}
+                            <div className="flex flex-col gap-2">
+                              {section.items.map((item) => renderItemRow(section.id, null, item))}
+                            </div>
+                            
+                            {/* Add buttons */}
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => addItem(section.id)}
+                                className="flex items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 transition hover:border-green-400 hover:text-green-700"
+                              >
+                                <IconPlus /> Add Item
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => addSubcategory(section.id)}
+                                className="flex items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 transition hover:border-green-400 hover:text-green-700"
+                              >
+                                <IconPlus /> Add Subcategory
                               </button>
                             </div>
-                          )
-                        })}
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => addItem(section.id)}
-                        className="mt-3 flex items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 transition hover:border-green-400 hover:text-green-700"
-                      >
-                        <IconPlus /> Add Item
-                      </button>
-                    </article>
-                  ))}
+                          </>
+                        )}
+                      </article>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Template Selector */}
           <div>
@@ -996,7 +1487,7 @@ function Editor() {
           {draftMenu && (
             <div>
               <p className="mb-3 text-sm font-semibold text-neutral-700">Live Preview</p>
-              <TemplateMenuPreview menu={draftMenu} currencySymbol={currencySymbol} />
+              <TemplateMenuPreview menu={{ ...draftMenu, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone }} currencySymbol={currencySymbol} />
             </div>
           )}
 
@@ -1009,6 +1500,7 @@ function Editor() {
       </div>
     </>
   )
+}
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -1103,6 +1595,8 @@ function Editor() {
           handleToggleOnlineOrders={handleToggleOnlineOrders}
           handleCurrencyChange={handleCurrencyChange}
           handleRestaurantNameChange={handleRestaurantNameChange}
+          handleRestaurantAddressChange={handleRestaurantAddressChange}
+          handleRestaurantPhoneChange={handleRestaurantPhoneChange}
           handleSlugChange={handleSlugChange}
           savedMenus={savedMenus}
           setDeleteConfirmId={setDeleteConfirmId}
@@ -1250,6 +1744,7 @@ function MenuViewer() {
   const [isCancelling, setIsCancelling] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [deviceId] = useState(() => getDeviceId())
+  const [showCartDrawer, setShowCartDrawer] = useState(false)
 
   const orderStorageKey = id ? `qr-order-${id}` : null
 
@@ -1584,7 +2079,7 @@ function MenuViewer() {
 
   const menuPreviewEl = (
     <TemplateMenuPreview
-      menu={menuData}
+      menu={{ ...menuData, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone }}
       currencySymbol={currencySymbol}
       orderingEnabled={allowOnlineOrders && !hasActiveOrder}
       onAddToCart={addToCart}
@@ -1845,15 +2340,139 @@ function MenuViewer() {
     </div>
   )
 
+  // ── total cart item count for the sticky bar ──────────────────────────────
+  const cartTotalItems = cartItems.reduce((sum, e) => sum + e.qty, 0)
+
   return (
-    <div className="min-h-screen bg-neutral-100 py-10 px-4">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        {orderStatus ? (
-          <>{orderCardEl}{menuPreviewEl}</>
-        ) : (
-          <>{menuPreviewEl}{orderCardEl}</>
-        )}
+    <div className="min-h-screen bg-neutral-100">
+      {/* ── Main scrollable content ─────────────────────────────── */}
+      <div className="py-10 px-4 pb-28 md:pb-10">
+        <div className="mx-auto flex max-w-4xl flex-col gap-6">
+          {/* Desktop: keep original order (order card first if active) */}
+          <div className="hidden md:flex flex-col gap-6">
+            {orderStatus ? (
+              <>{orderCardEl}{menuPreviewEl}</>
+            ) : (
+              <>{menuPreviewEl}{orderCardEl}</>
+            )}
+          </div>
+
+          {/* Mobile: only the menu, cart is in sticky drawer */}
+          <div className="md:hidden">
+            {menuPreviewEl}
+          </div>
+        </div>
       </div>
+
+      {/* ── Sticky bottom cart bar (mobile only, ordering enabled) ─ */}
+      {allowOnlineOrders && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden">
+          {/* Backdrop when drawer is open */}
+          {showCartDrawer && (
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-30"
+              onClick={() => setShowCartDrawer(false)}
+            />
+          )}
+
+          {/* Slide-up drawer */}
+          <div
+            className="relative z-40 bg-white rounded-t-3xl shadow-2xl transition-transform duration-300 ease-out"
+            style={{ transform: showCartDrawer ? 'translateY(0)' : 'translateY(100%)', position: 'fixed', bottom: 0, left: 0, right: 0 }}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-1">
+              <div className="w-10 h-1 rounded-full bg-neutral-200" />
+            </div>
+
+            {/* Drawer header */}
+            <div className="flex items-center justify-between px-5 pb-3 pt-1">
+              <h3 className="text-base font-bold text-neutral-900">
+                {orderStatus ? 'Your order' : 'Your cart'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowCartDrawer(false)}
+                className="rounded-full p-1.5 text-neutral-500 hover:bg-neutral-100 transition"
+                aria-label="Close cart"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Drawer body — scrollable */}
+            <div className="overflow-y-auto px-5 pb-6" style={{ maxHeight: '70vh' }}>
+              {orderCardEl}
+            </div>
+          </div>
+
+          {/* Sticky bottom pill / bar (always visible) */}
+          {!showCartDrawer && (
+            <div
+              className="px-4 pb-4 pt-2"
+              style={{ background: 'linear-gradient(to top, white 60%, transparent)' }}
+            >
+              {hasActiveOrder ? (
+                /* Active order — show status bar */
+                <button
+                  type="button"
+                  onClick={() => setShowCartDrawer(true)}
+                  className="w-full flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition-transform active:scale-[0.98]"
+                  style={{ background: 'linear-gradient(135deg,#0f766e,#14b8a6)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex w-6 h-6 rounded-full bg-white/20 items-center justify-center text-xs font-bold">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4" />
+                      </svg>
+                    </span>
+                    <span>View order status</span>
+                  </div>
+                  <span
+                    className="rounded-full px-2.5 py-0.5 text-xs font-bold"
+                    style={{ background: 'rgba(255,255,255,0.2)' }}
+                  >
+                    {orderStatus === 'confirmed' ? 'Confirmed' : orderStatus === 'preparing' ? 'Preparing' : orderStatus === 'completed' ? 'Completed' : 'Pending'}
+                  </span>
+                </button>
+              ) : cartTotalItems > 0 ? (
+                /* Items in cart — show cart bar */
+                <button
+                  type="button"
+                  onClick={() => setShowCartDrawer(true)}
+                  className="w-full flex items-center justify-between gap-3 rounded-2xl px-5 py-3.5 text-sm font-semibold text-white shadow-lg transition-transform active:scale-[0.98]"
+                  style={{ background: 'linear-gradient(135deg,#16a34a,#15803d)' }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex w-6 h-6 rounded-full bg-white/25 items-center justify-center text-xs font-bold"
+                    >
+                      {cartTotalItems}
+                    </span>
+                    <span>View cart</span>
+                  </div>
+                  <span className="font-mono font-bold">
+                    {orderCurrency}{orderTotal.toFixed(2)}
+                  </span>
+                </button>
+              ) : (
+                /* Empty cart — show subtle hint */
+                <div
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm text-neutral-500"
+                  style={{ background: 'rgba(255,255,255,0.9)', border: '1px dashed #d1d5db' }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <span>Tap items to add to cart</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

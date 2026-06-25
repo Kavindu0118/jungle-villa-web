@@ -64,12 +64,17 @@ export default function MyMenuScreen({
 
               {/* Sections summary */}
               <div className="flex-1 space-y-1.5">
-                {menu.sections.slice(0, 3).map((section) => (
-                  <div key={section.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm" style={{ background: '#f0fdf4' }}>
-                    <span className="font-medium text-neutral-800">{section.title}</span>
-                    <span className="text-xs text-neutral-500">{section.items.length} item{section.items.length !== 1 ? 's' : ''}</span>
-                  </div>
-                ))}
+                {menu.sections.slice(0, 3).map((section) => {
+                  const itemCount = section.subcategories && section.subcategories.length > 0
+                    ? section.subcategories.reduce((c, sub) => c + (sub.items?.length || 0), 0)
+                    : (section.items?.length || 0)
+                  return (
+                    <div key={section.id} className="flex items-center justify-between rounded-lg px-3 py-1.5 text-sm" style={{ background: '#f0fdf4' }}>
+                      <span className="font-medium text-neutral-800">{section.title}</span>
+                      <span className="text-xs text-neutral-500">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+                    </div>
+                  )
+                })}
                 {menu.sections.length > 3 && (
                   <p className="text-xs text-neutral-400 pl-1">+{menu.sections.length - 3} more sections</p>
                 )}
