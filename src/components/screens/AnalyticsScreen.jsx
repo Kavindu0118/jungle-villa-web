@@ -324,25 +324,40 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
     let totalPeriodRevenue = 0
     let totalPeriodQty = 0
 
+    // Compute overall total item revenue in this period to keep contribution percentages correct
+    let overallRevenue = 0
+    filteredOrdersForItems.forEach((order) => {
+      const isPaid = order.status?.toUpperCase() === 'PAID'
+      if (!isPaid) return
+      if (Array.isArray(order.items)) {
+        order.items.forEach((item) => {
+          overallRevenue += Number(item.qty || 1) * Number(item.price || 0)
+        })
+      }
+    })
+
     filteredOrdersForItems.forEach((order) => {
       const isPaid = order.status?.toUpperCase() === 'PAID'
       if (!isPaid) return
 
-      const orderTotal = Number(order.total || 0)
-      totalPeriodRevenue += orderTotal
-
-      // Track daily sales
       const dateStr = order.createdAt.split('T')[0]
-      dailySalesMap[dateStr] = (dailySalesMap[dateStr] || 0) + orderTotal
 
       if (Array.isArray(order.items)) {
         order.items.forEach((item) => {
           const name = item.name || 'Unnamed Item'
+
+          // Apply search query filter if provided
+          if (searchQuery && !name.toLowerCase().includes(searchQuery.toLowerCase())) {
+            return
+          }
+
           const qty = Number(item.qty || 1)
           const price = Number(item.price || 0)
           const itemTotal = qty * price
 
           totalPeriodQty += qty
+          totalPeriodRevenue += itemTotal
+          dailySalesMap[dateStr] = (dailySalesMap[dateStr] || 0) + itemTotal
 
           if (!itemsMap[name]) {
             itemsMap[name] = {
@@ -363,7 +378,7 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
     const itemsList = Object.keys(itemsMap).map((name) => {
       const item = itemsMap[name]
       const avgPrice = item.qty > 0 ? item.revenue / item.qty : (item.prices.length > 0 ? item.prices.reduce((a,b)=>a+b, 0) / item.prices.length : 0)
-      const contributionPct = totalPeriodRevenue > 0 ? (item.revenue / totalPeriodRevenue) * 100 : 0
+      const contributionPct = overallRevenue > 0 ? (item.revenue / overallRevenue) * 100 : 0
       return {
         name,
         qty: item.qty,
@@ -392,7 +407,7 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
       totalPeriodRevenue,
       totalPeriodQty,
     }
-  }, [orders, detailedFilterRange, customStartDate, customEndDate])
+  }, [orders, detailedFilterRange, customStartDate, customEndDate, searchQuery])
 
   const detailedChartPoints = useMemo(() => {
     const trend = allItemsStats.dailyTrend
@@ -746,10 +761,28 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
         </div>
 
         {/* All Items Performance Table */}
-        <div className="card p-5 overflow-hidden">
-          <div className="mb-4">
-            <h3 className="text-base font-bold text-neutral-900">Menu Items Performance</h3>
-            <p className="text-xs text-neutral-500">List of all items sold with quantities, pricing, and revenue share</p>
+        <div className="card p-5 overflow-hidden space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 className="text-base font-bold text-neutral-900">Menu Items Performance</h3>
+              <p className="text-xs text-neutral-500">List of all items sold with quantities, pricing, and revenue share</p>
+            </div>
+
+            {/* Search Input Box */}
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                type="text"
+                placeholder="Filter by item name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-1.5 w-full sm:w-60 text-xs font-semibold rounded-lg border border-neutral-300 bg-white text-neutral-700 placeholder-neutral-400 outline-none transition focus:border-green-500 focus:ring-1 focus:ring-green-500"
+              />
+            </div>
           </div>
 
           <div className="overflow-x-auto">
