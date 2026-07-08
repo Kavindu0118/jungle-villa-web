@@ -14,6 +14,7 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
   const [hoveredItemPoint, setHoveredItemPoint] = useState(null)
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const isConfigured = useMemo(() => {
     return !!(profile?.backupDatabase?.apiKey && profile?.backupDatabase?.projectId && profile?.backupDatabase?.appId)
