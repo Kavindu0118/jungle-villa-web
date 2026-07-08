@@ -82,6 +82,7 @@ export default function SettingsScreen({
 
   const [testStatus, setTestStatus] = useState(null)
   const [isSavingConfig, setIsSavingConfig] = useState(false)
+  const [isEditing, setIsEditing] = useState(!profile?.backupDatabase)
 
   useEffect(() => {
     if (profile?.backupDatabase) {
@@ -154,6 +155,7 @@ export default function SettingsScreen({
       }
       await handleUpdateBackupDatabase(config)
       alert('Backup database connection saved successfully!')
+      setIsEditing(false)
     } catch (err) {
       console.error('Save config error:', err)
       alert(`Failed to save: ${err.message}`)
@@ -519,101 +521,175 @@ export default function SettingsScreen({
       <div className="card p-5 mb-4">
         <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#16a34a' }}>Backup Database Setup</p>
         <div className="space-y-4">
-          <p className="text-sm text-neutral-500">
-            Connect a secondary Firebase Firestore database to feed live orders and sales data to the analytics dashboard.
-          </p>
+          {profile?.backupDatabase && !isEditing ? (
+            <>
+              <div className="flex items-center gap-3 bg-green-50 text-green-800 border border-green-200 p-4 rounded-xl">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+                <div>
+                  <p className="font-bold text-sm">Cloud Database Connected</p>
+                  <p className="text-xs text-green-700 mt-0.5">Live restaurant POS sales data is successfully feeding analytics.</p>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">API Key <span className="text-red-500">*</span></label>
-              <input
-                type="password"
-                value={dbApiKey}
-                onChange={(e) => setDbApiKey(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                placeholder="Enter Firebase API Key"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">Project ID <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                value={dbProjectId}
-                onChange={(e) => setDbProjectId(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                placeholder="e.g. my-restaurant-pos"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">App ID <span className="text-red-500">*</span></label>
-              <input
-                type="text"
-                value={dbAppId}
-                onChange={(e) => setDbAppId(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                placeholder="e.g. 1:1234567890:web:abcdef123456"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">Auth Domain (Optional)</label>
-              <input
-                type="text"
-                value={dbAuthDomain}
-                onChange={(e) => setDbAuthDomain(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                placeholder="e.g. my-restaurant-pos.firebaseapp.com"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">Storage Bucket (Optional)</label>
-              <input
-                type="text"
-                value={dbStorageBucket}
-                onChange={(e) => setDbStorageBucket(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                placeholder="e.g. my-restaurant-pos.appspot.com"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">Messaging Sender ID (Optional)</label>
-              <input
-                type="text"
-                value={dbMessagingSenderId}
-                onChange={(e) => setDbMessagingSenderId(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
-                placeholder="e.g. 123456789012"
-              />
-            </div>
-          </div>
+              <div className="border border-neutral-100 rounded-xl p-4 bg-neutral-50/50 space-y-2.5 text-xs text-neutral-600">
+                <div className="flex justify-between">
+                  <span className="font-semibold text-neutral-500">Project ID</span>
+                  <span className="font-mono text-neutral-900">{profile.backupDatabase.projectId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-neutral-500">API Key</span>
+                  <span className="font-mono text-neutral-900">••••••••••••••••••••••••••••</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-semibold text-neutral-500">App ID</span>
+                  <span className="font-mono text-neutral-900">
+                    {profile.backupDatabase.appId.slice(0, 10)}... (masked)
+                  </span>
+                </div>
+              </div>
 
-          {testStatus && (
-            <div className={`p-3 rounded-xl text-sm ${
-              testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
-              testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-              'bg-red-50 text-red-800 border border-red-200'
-            }`}>
-              {testStatus.message}
-            </div>
+              {testStatus && (
+                <div className={`p-3 rounded-xl text-sm ${
+                  testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
+                  testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+                  'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {testStatus.message}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={isRestaurantUpdating || isSavingConfig}
+                  className="btn-ghost flex-1 py-2.5 text-sm font-semibold"
+                >
+                  Test Connection
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="btn-green flex-1 py-2.5 text-sm font-semibold"
+                >
+                  Update Settings
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-neutral-500">
+                Connect a secondary Firebase Firestore database to feed live orders and sales data to the analytics dashboard.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">API Key <span className="text-red-500">*</span></label>
+                  <input
+                    type="password"
+                    value={dbApiKey}
+                    onChange={(e) => setDbApiKey(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                    placeholder="Enter Firebase API Key"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">Project ID <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={dbProjectId}
+                    onChange={(e) => setDbProjectId(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                    placeholder="e.g. my-restaurant-pos"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">App ID <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    value={dbAppId}
+                    onChange={(e) => setDbAppId(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                    placeholder="e.g. 1:1234567890:web:abcdef123456"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">Auth Domain (Optional)</label>
+                  <input
+                    type="text"
+                    value={dbAuthDomain}
+                    onChange={(e) => setDbAuthDomain(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                    placeholder="e.g. my-restaurant-pos.firebaseapp.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">Storage Bucket (Optional)</label>
+                  <input
+                    type="text"
+                    value={dbStorageBucket}
+                    onChange={(e) => setDbStorageBucket(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                    placeholder="e.g. my-restaurant-pos.appspot.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-600 mb-1">Messaging Sender ID (Optional)</label>
+                  <input
+                    type="text"
+                    value={dbMessagingSenderId}
+                    onChange={(e) => setDbMessagingSenderId(e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                    placeholder="e.g. 123456789012"
+                  />
+                </div>
+              </div>
+
+              {testStatus && (
+                <div className={`p-3 rounded-xl text-sm ${
+                  testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
+                  testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+                  'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {testStatus.message}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                {profile?.backupDatabase && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTestStatus(null)
+                      setIsEditing(false)
+                    }}
+                    className="btn-ghost py-2.5 text-sm font-semibold"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleTestConnection}
+                  disabled={isRestaurantUpdating || isSavingConfig}
+                  className="btn-ghost flex-1 py-2.5 text-sm font-semibold"
+                >
+                  Test Connection
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveConfig}
+                  disabled={isRestaurantUpdating || isSavingConfig || !dbApiKey || !dbProjectId || !dbAppId}
+                  className="btn-green flex-1 py-2.5 text-sm font-semibold"
+                >
+                  {isSavingConfig ? 'Saving...' : 'Save Configuration'}
+                </button>
+              </div>
+            </>
           )}
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={handleTestConnection}
-              disabled={isRestaurantUpdating || isSavingConfig}
-              className="btn-ghost flex-1 py-2.5 text-sm font-semibold"
-            >
-              Test Connection
-            </button>
-            <button
-              type="button"
-              onClick={handleSaveConfig}
-              disabled={isRestaurantUpdating || isSavingConfig || !dbApiKey || !dbProjectId || !dbAppId}
-              className="btn-green flex-1 py-2.5 text-sm font-semibold"
-            >
-              {isSavingConfig ? 'Saving...' : 'Save Configuration'}
-            </button>
-          </div>
         </div>
       </div>
 
