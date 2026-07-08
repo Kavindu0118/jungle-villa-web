@@ -10,9 +10,10 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
   const [filterRange, setFilterRange] = useState('7d') // 'today', '7d', '30d', 'all'
   const [hoveredPoint, setHoveredPoint] = useState(null) // for chart tooltips
   const [viewMode, setViewMode] = useState('dashboard') // 'dashboard' or 'detailed-items'
-  const [detailedItemName, setDetailedItemName] = useState('')
   const [detailedFilterRange, setDetailedFilterRange] = useState('7d')
   const [hoveredItemPoint, setHoveredItemPoint] = useState(null)
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
 
   const isConfigured = useMemo(() => {
     return !!(profile?.backupDatabase?.apiKey && profile?.backupDatabase?.projectId && profile?.backupDatabase?.appId)
@@ -281,24 +282,11 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
 
 
 
-  const allUniqueItems = useMemo(() => {
-    const names = new Set()
-    orders.forEach((order) => {
-      if (Array.isArray(order.items)) {
-        order.items.forEach((item) => {
-          if (item.name) names.add(item.name)
-        })
-      }
-    })
-    return Array.from(names).sort()
-  }, [orders])
-
-  const itemDetailedStats = useMemo(() => {
-    if (!detailedItemName) return null
-
+  const allItemsStats = useMemo(() => {
     const now = new Date()
     
-    const itemOrders = orders.filter((order) => {
+    // First, filter orders in the date range
+    const filteredOrdersForItems = orders.filter((order) => {
       let orderDate
       if (order.createdAt) {
         orderDate = new Date(order.createdAt)
@@ -308,97 +296,85 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
       if (isNaN(orderDate.getTime())) return false
 
       if (detailedFilterRange === 'today') {
-        if (!(orderDate.getDate() === now.getDate() &&
-              orderDate.getMonth() === now.getMonth() &&
-              orderDate.getFullYear() === now.getFullYear())) {
-          return false
-        }
+        return (
+          orderDate.getDate() === now.getDate() &&
+          orderDate.getMonth() === now.getMonth() &&
+          orderDate.getFullYear() === now.getFullYear()
+        )
       } else if (detailedFilterRange === '7d') {
         const sevenDaysAgo = new Date()
         sevenDaysAgo.setDate(now.getDate() - 7)
-        if (orderDate < sevenDaysAgo) return false
+        return orderDate >= sevenDaysAgo
       } else if (detailedFilterRange === '30d') {
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(now.getDate() - 30)
-        if (orderDate < thirtyDaysAgo) return false
+        return orderDate >= thirtyDaysAgo
+      } else if (detailedFilterRange === 'custom') {
+        if (!customStartDate || !customEndDate) return true
+        const start = new Date(customStartDate + 'T00:00:00')
+        const end = new Date(customEndDate + 'T23:59:59')
+        return orderDate >= start && orderDate <= end
       }
-
-      const hasItem = Array.isArray(order.items) && order.items.some(it => it.name === detailedItemName)
-      return hasItem && order.status?.toUpperCase() === 'PAID'
+      return true // 'all'
     })
 
-    let totalQty = 0
-    let totalRevenue = 0
-    let occurrences = 0
-    let priceSum = 0
-    const dailyEarningsMap = {}
-    const orderSources = {}
-    const tablesMap = {}
-
-    itemOrders.forEach((order) => {
-      occurrences += 1
-      const orderDateStr = order.createdAt.split('T')[0]
-      const source = order.source?.toUpperCase() || 'COUNTER'
-      
-      order.items.forEach((item) => {
-        if (item.name === detailedItemName) {
-          const qty = Number(item.qty || 1)
-          const price = Number(item.price || 0)
-          const subtotal = qty * price
-
-          totalQty += qty
-          totalRevenue += subtotal
-          priceSum += price
-          
-          dailyEarningsMap[orderDateStr] = (dailyEarningsMap[orderDateStr] || 0) + subtotal
-          orderSources[source] = (orderSources[source] || 0) + subtotal
-
-          if (order.tableNumber !== undefined && order.tableNumber !== null) {
-            const tblKey = `Table ${order.tableNumber}`
-            tablesMap[tblKey] = (tablesMap[tblKey] || 0) + subtotal
-          }
-        }
-      })
-    })
-
-    const avgPrice = totalQty > 0 ? totalRevenue / totalQty : (occurrences > 0 ? priceSum / occurrences : 0)
-
+    // Now, aggregate details for all items across these orders
+    const itemsMap = {}
+    const dailySalesMap = {} // dateStr -> totalSalesForDay
     let totalPeriodRevenue = 0
-    orders.forEach((order) => {
+    let totalPeriodQty = 0
+
+    filteredOrdersForItems.forEach((order) => {
       const isPaid = order.status?.toUpperCase() === 'PAID'
       if (!isPaid) return
 
-      let orderDate
-      if (order.createdAt) {
-        orderDate = new Date(order.createdAt)
-      } else {
-        return
-      }
-      if (isNaN(orderDate.getTime())) return
+      const orderTotal = Number(order.total || 0)
+      totalPeriodRevenue += orderTotal
 
-      let matchTime = true
-      if (detailedFilterRange === 'today') {
-        matchTime = orderDate.getDate() === now.getDate() &&
-                    orderDate.getMonth() === now.getMonth() &&
-                    orderDate.getFullYear() === now.getFullYear()
-      } else if (detailedFilterRange === '7d') {
-        const sevenDaysAgo = new Date()
-        sevenDaysAgo.setDate(now.getDate() - 7)
-        matchTime = orderDate >= sevenDaysAgo
-      } else if (detailedFilterRange === '30d') {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(now.getDate() - 30)
-        matchTime = orderDate >= thirtyDaysAgo
-      }
+      // Track daily sales
+      const dateStr = order.createdAt.split('T')[0]
+      dailySalesMap[dateStr] = (dailySalesMap[dateStr] || 0) + orderTotal
 
-      if (matchTime) {
-        totalPeriodRevenue += Number(order.total || 0)
+      if (Array.isArray(order.items)) {
+        order.items.forEach((item) => {
+          const name = item.name || 'Unnamed Item'
+          const qty = Number(item.qty || 1)
+          const price = Number(item.price || 0)
+          const itemTotal = qty * price
+
+          totalPeriodQty += qty
+
+          if (!itemsMap[name]) {
+            itemsMap[name] = {
+              name,
+              qty: 0,
+              revenue: 0,
+              prices: [],
+            }
+          }
+          itemsMap[name].qty += qty
+          itemsMap[name].revenue += itemTotal
+          itemsMap[name].prices.push(price)
+        })
       }
     })
 
-    const contributionPct = totalPeriodRevenue > 0 ? (totalRevenue / totalPeriodRevenue) * 100 : 0
+    // Convert items map to sorted array
+    const itemsList = Object.keys(itemsMap).map((name) => {
+      const item = itemsMap[name]
+      const avgPrice = item.qty > 0 ? item.revenue / item.qty : (item.prices.length > 0 ? item.prices.reduce((a,b)=>a+b, 0) / item.prices.length : 0)
+      const contributionPct = totalPeriodRevenue > 0 ? (item.revenue / totalPeriodRevenue) * 100 : 0
+      return {
+        name,
+        qty: item.qty,
+        revenue: item.revenue,
+        avgPrice,
+        contributionPct,
+      }
+    }).sort((a, b) => b.qty - a.qty)
 
-    const dailyTrend = Object.keys(dailyEarningsMap)
+    // Format daily sales trend for the chart
+    const dailyTrend = Object.keys(dailySalesMap)
       .sort()
       .map((date) => {
         const d = new Date(date)
@@ -406,36 +382,22 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
         return {
           dateStr: formattedDate,
           rawDate: date,
-          earnings: dailyEarningsMap[date]
+          earnings: dailySalesMap[date],
         }
       })
 
-    const sourcesList = Object.keys(orderSources).map(key => ({
-      source: key,
-      revenue: orderSources[key]
-    })).sort((a,b) => b.revenue - a.revenue)
-
-    const tablesList = Object.keys(tablesMap).map(key => ({
-      table: key,
-      revenue: tablesMap[key]
-    })).sort((a,b) => b.revenue - a.revenue).slice(0, 5)
-
     return {
-      totalQty,
-      totalRevenue,
-      avgPrice,
-      contributionPct,
+      itemsList,
       dailyTrend,
-      sourcesList,
-      tablesList,
-      itemOrders: [...itemOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      totalPeriodRevenue,
+      totalPeriodQty,
     }
-  }, [orders, detailedItemName, detailedFilterRange])
+  }, [orders, detailedFilterRange, customStartDate, customEndDate])
 
   const detailedChartPoints = useMemo(() => {
-    if (!itemDetailedStats || itemDetailedStats.dailyTrend.length === 0) return []
+    const trend = allItemsStats.dailyTrend
+    if (trend.length === 0) return []
 
-    const trend = itemDetailedStats.dailyTrend
     const maxEarn = Math.max(...trend.map((t) => t.earnings), 10)
     const xRange = chartWidth - chartPadding.left - chartPadding.right
     const yRange = chartHeight - chartPadding.top - chartPadding.bottom
@@ -445,7 +407,7 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
       const y = chartPadding.top + yRange - (t.earnings / maxEarn) * yRange
       return { x, y, date: t.dateStr, earnings: t.earnings }
     })
-  }, [itemDetailedStats])
+  }, [allItemsStats])
 
   const detailedChartPath = useMemo(() => {
     if (detailedChartPoints.length === 0) return ''
@@ -554,17 +516,6 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
   }
 
   if (viewMode === 'detailed-items') {
-    const itemStats = itemDetailedStats || {
-      totalQty: 0,
-      totalRevenue: 0,
-      avgPrice: 0,
-      contributionPct: 0,
-      dailyTrend: [],
-      sourcesList: [],
-      tablesList: [],
-      itemOrders: []
-    }
-
     return (
       <div className="p-6 sm:p-8 space-y-6">
         {/* Back Button & Header */}
@@ -584,32 +535,13 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
               Back to Dashboard
             </button>
             <h2 className="text-2xl font-bold text-neutral-900 flex items-center gap-2">
-              Item Sales Performance
+              Menu Items Analytics
             </h2>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Item Selector Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-500 font-semibold">Item:</span>
-              <select
-                value={detailedItemName}
-                onChange={(e) => {
-                  setHoveredItemPoint(null)
-                  setDetailedItemName(e.target.value)
-                }}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 outline-none transition focus:border-green-500"
-              >
-                {allUniqueItems.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             {/* Timeframe Filter Dropdown */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-neutral-500 font-semibold">Timeframe:</span>
               <select
                 value={detailedFilterRange}
@@ -623,7 +555,26 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
                 <option value="7d">Last 7 Days</option>
                 <option value="30d">Last 30 Days</option>
                 <option value="all">All Time</option>
+                <option value="custom">Custom Range...</option>
               </select>
+
+              {detailedFilterRange === 'custom' && (
+                <div className="flex items-center gap-1.5 ml-2">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 outline-none focus:border-green-500"
+                  />
+                  <span className="text-xs text-neutral-400 font-bold">to</span>
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="rounded-lg border border-neutral-300 bg-white px-2 py-1 text-xs font-semibold text-neutral-700 outline-none focus:border-green-500"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -633,8 +584,8 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
           {/* Total Quantity */}
           <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)' }}>
             <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10" />
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-100">Total Quantity Sold</p>
-            <p className="mt-3 text-3xl font-extrabold">{itemStats.totalQty}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-indigo-100">Total Items Sold</p>
+            <p className="mt-3 text-3xl font-extrabold">{allItemsStats.totalPeriodQty}</p>
             <div className="mt-3 text-xs text-indigo-100/90 font-medium">
               <span>Units sold in timeframe</span>
             </div>
@@ -646,300 +597,206 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
             <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Revenue Earned</p>
             <p className="mt-3 text-3xl font-extrabold">
               {currencySymbol}
-              {itemStats.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {allItemsStats.totalPeriodRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
             <div className="mt-3 text-xs text-emerald-100/90 font-medium">
               <span>Direct sales income</span>
             </div>
           </div>
 
-          {/* Average Price */}
+          {/* Unique Items Sold */}
           <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)' }}>
             <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10" />
-            <p className="text-xs font-bold uppercase tracking-widest text-amber-100">Average Unit Price</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-100">Unique Items Sold</p>
             <p className="mt-3 text-3xl font-extrabold">
-              {currencySymbol}
-              {itemStats.avgPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {allItemsStats.itemsList.length}
             </p>
             <div className="mt-3 text-xs text-amber-100/90 font-medium">
-              <span>Calculated base value</span>
+              <span>Menu items active</span>
             </div>
           </div>
 
-          {/* Contribution */}
+          {/* Active Sales Days */}
           <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-sm" style={{ background: 'linear-gradient(135deg, #db2777 0%, #ec4899 100%)' }}>
             <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-white/10" />
-            <p className="text-xs font-bold uppercase tracking-widest text-pink-100">Sales Contribution</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-pink-100">Active Sales Days</p>
             <p className="mt-3 text-3xl font-extrabold">
-              {itemStats.contributionPct.toFixed(1)}%
+              {allItemsStats.dailyTrend.length}
             </p>
             <div className="mt-3 text-xs text-pink-100/90 font-medium">
-              <span>Of total restaurant sales</span>
+              <span>Days with POS transactions</span>
             </div>
           </div>
         </div>
 
-        {/* Item Sales Trend & Details Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* SVG Trend Line Chart */}
-          <div className="card lg:col-span-2 p-5 flex flex-col justify-between">
-            <div>
-              <h3 className="text-base font-bold text-neutral-900">Daily Earnings Trend</h3>
-              <p className="text-xs text-neutral-500">Revenue generated per day for {detailedItemName}</p>
-            </div>
+        {/* Daily Sales Chart */}
+        <div className="card p-5 flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-bold text-neutral-900">Per Day Total Sales</h3>
+            <p className="text-xs text-neutral-500">Gross revenue generated per day for all menu items</p>
+          </div>
 
-            <div className="mt-6 relative h-[210px] w-full">
-              {itemStats.dailyTrend.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-neutral-400 font-medium">
-                  No sales recorded for this item in this timeframe.
-                </div>
-              ) : (
-                <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-full w-full overflow-visible">
-                  <defs>
-                    <linearGradient id="itemChartGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
-                      <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
+          <div className="mt-6 relative h-[210px] w-full">
+            {allItemsStats.dailyTrend.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-neutral-400 font-medium">
+                No sales recorded in this timeframe.
+              </div>
+            ) : (
+              <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-full w-full overflow-visible">
+                <defs>
+                  <linearGradient id="itemChartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
 
-                  {/* Y Grid Lines */}
-                  {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
-                    const maxEarn = Math.max(...itemStats.dailyTrend.map((t) => t.earnings), 10)
-                    const lineY = chartPadding.top + val * (chartHeight - chartPadding.top - chartPadding.bottom)
-                    const textLabel = (maxRev => (maxRev * (1 - val)).toFixed(0))(maxEarn)
-                    return (
-                      <g key={idx}>
-                        <line
-                          x1={chartPadding.left}
-                          y1={lineY}
-                          x2={chartWidth - chartPadding.right}
-                          y2={lineY}
-                          stroke="#e5e7eb"
-                          strokeWidth="1"
-                          strokeDasharray="4 4"
-                        />
-                        <text
-                          x={chartPadding.left - 10}
-                          y={lineY + 4}
-                          fill="#9ca3af"
-                          fontSize="9"
-                          fontWeight="600"
-                          textAnchor="end"
-                        >
-                          {currencySymbol}{textLabel}
-                        </text>
-                      </g>
-                    )
-                  })}
-
-                  {/* Area under curve */}
-                  <path d={detailedChartAreaPath} fill="url(#itemChartGradient)" />
-
-                  {/* Main Curved Line */}
-                  <path d={detailedChartPath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
-
-                  {/* Point nodes & interaction */}
-                  {detailedChartPoints.map((pt, idx) => (
+                {/* Y Grid Lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((val, idx) => {
+                  const maxEarn = Math.max(...allItemsStats.dailyTrend.map((t) => t.earnings), 10)
+                  const lineY = chartPadding.top + val * (chartHeight - chartPadding.top - chartPadding.bottom)
+                  const textLabel = (maxRev => (maxRev * (1 - val)).toFixed(0))(maxEarn)
+                  return (
                     <g key={idx}>
-                      <circle
-                        cx={pt.x}
-                        cy={pt.y}
-                        r="4"
-                        fill="#ffffff"
-                        stroke="#6366f1"
-                        strokeWidth="2.5"
-                        className="cursor-pointer transition-transform hover:scale-150"
-                        onMouseEnter={() => setHoveredItemPoint(pt)}
-                        onMouseLeave={() => setHoveredItemPoint(null)}
+                      <line
+                        x1={chartPadding.left}
+                        y1={lineY}
+                        x2={chartWidth - chartPadding.right}
+                        y2={lineY}
+                        stroke="#e5e7eb"
+                        strokeWidth="1"
+                        strokeDasharray="4 4"
                       />
-                    </g>
-                  ))}
-
-                  {/* X Axis Labels */}
-                  {detailedChartPoints.map((pt, idx) => {
-                    const step = Math.ceil(detailedChartPoints.length / 6)
-                    if (idx % step !== 0 && idx !== detailedChartPoints.length - 1) return null
-
-                    return (
                       <text
-                        key={idx}
-                        x={pt.x}
-                        y={chartHeight - 10}
+                        x={chartPadding.left - 10}
+                        y={lineY + 4}
                         fill="#9ca3af"
                         fontSize="9"
                         fontWeight="600"
-                        textAnchor="middle"
+                        textAnchor="end"
                       >
-                        {pt.date}
+                        {currencySymbol}{textLabel}
                       </text>
-                    )
-                  })}
-                </svg>
-              )}
+                    </g>
+                  )
+                })}
 
-              {/* Hover Tooltip */}
-              {hoveredItemPoint && (
-                <div
-                  className="absolute z-10 rounded-xl bg-neutral-900 p-2.5 text-xs text-white shadow-md border border-neutral-800"
-                  style={{
-                    left: `${(hoveredItemPoint.x / chartWidth) * 100}%`,
-                    top: `${(hoveredItemPoint.y / chartHeight) * 100 - 25}%`,
-                    transform: 'translate(-50%, -100%)',
-                  }}
-                >
-                  <p className="font-semibold text-neutral-400">{hoveredItemPoint.date}</p>
-                  <p className="mt-0.5 font-bold text-sm">
-                    {currencySymbol}
-                    {hoveredItemPoint.earnings.toFixed(2)}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+                {/* Area under curve */}
+                <path d={detailedChartAreaPath} fill="url(#itemChartGradient)" />
 
-          {/* Ordering Preferences */}
-          <div className="card p-5 space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-neutral-900">Ordering Preferences</h3>
-              <p className="text-xs text-neutral-500">Channels and table demands for this item</p>
-            </div>
+                {/* Main Curved Line */}
+                <path d={detailedChartPath} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" />
 
-            <div className="space-y-5">
-              {/* Order Channels */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Order Source</h4>
-                <div className="space-y-2.5">
-                  {itemStats.sourcesList.length === 0 ? (
-                    <p className="text-xs text-neutral-400 font-medium">No sales recorded.</p>
-                  ) : (
-                    itemStats.sourcesList.map((src) => {
-                      const pct = (src.revenue / itemStats.totalRevenue) * 100
-                      const colors = {
-                        COUNTER: 'bg-indigo-500',
-                        TABLE: 'bg-pink-500',
-                        ONLINE: 'bg-sky-500',
-                      }
-                      return (
-                        <div key={src.source} className="space-y-1">
-                          <div className="flex justify-between text-xs font-semibold text-neutral-700">
-                            <span>{src.source}</span>
-                            <span>{pct.toFixed(0)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${colors[src.source] || 'bg-neutral-400'}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
+                {/* Point nodes & interaction */}
+                {detailedChartPoints.map((pt, idx) => (
+                  <g key={idx}>
+                    <circle
+                      cx={pt.x}
+                      cy={pt.y}
+                      r="4"
+                      fill="#ffffff"
+                      stroke="#6366f1"
+                      strokeWidth="2.5"
+                      className="cursor-pointer transition-transform hover:scale-150"
+                      onMouseEnter={() => setHoveredItemPoint(pt)}
+                      onMouseLeave={() => setHoveredItemPoint(null)}
+                    />
+                  </g>
+                ))}
+
+                {/* X Axis Labels */}
+                {detailedChartPoints.map((pt, idx) => {
+                  const step = Math.ceil(detailedChartPoints.length / 6)
+                  if (idx % step !== 0 && idx !== detailedChartPoints.length - 1) return null
+
+                  return (
+                    <text
+                      key={idx}
+                      x={pt.x}
+                      y={chartHeight - 10}
+                      fill="#9ca3af"
+                      fontSize="9"
+                      fontWeight="600"
+                      textAnchor="middle"
+                    >
+                      {pt.date}
+                    </text>
+                  )
+                })}
+              </svg>
+            )}
+
+            {/* Hover Tooltip */}
+            {hoveredItemPoint && (
+              <div
+                className="absolute z-10 rounded-xl bg-neutral-900 p-2.5 text-xs text-white shadow-md border border-neutral-800"
+                style={{
+                  left: `${(hoveredItemPoint.x / chartWidth) * 100}%`,
+                  top: `${(hoveredItemPoint.y / chartHeight) * 100 - 25}%`,
+                  transform: 'translate(-50%, -100%)',
+                }}
+              >
+                <p className="font-semibold text-neutral-400">{hoveredItemPoint.date}</p>
+                <p className="mt-0.5 font-bold text-sm">
+                  {currencySymbol}
+                  {hoveredItemPoint.earnings.toFixed(2)}
+                </p>
               </div>
-
-              {/* Table Performance */}
-              <div className="space-y-2 pt-2 border-t">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Top Ordering Tables</h4>
-                <div className="space-y-2.5">
-                  {itemStats.tablesList.length === 0 ? (
-                    <p className="text-xs text-neutral-400 font-medium">No table orders recorded.</p>
-                  ) : (
-                    itemStats.tablesList.map((tbl) => {
-                      const pct = (tbl.revenue / itemStats.totalRevenue) * 100
-                      return (
-                        <div key={tbl.table} className="space-y-1">
-                          <div className="flex justify-between text-xs font-semibold text-neutral-700">
-                            <span>{tbl.table}</span>
-                            <span>{pct.toFixed(0)}%</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Item Transactions Table */}
+        {/* All Items Performance Table */}
         <div className="card p-5 overflow-hidden">
           <div className="mb-4">
-            <h3 className="text-base font-bold text-neutral-900">Recent Transactions containing this Item</h3>
-            <p className="text-xs text-neutral-500">POS checkout details specifying quantity and price</p>
+            <h3 className="text-base font-bold text-neutral-900">Menu Items Performance</h3>
+            <p className="text-xs text-neutral-500">List of all items sold with quantities, pricing, and revenue share</p>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-neutral-100 text-neutral-400 uppercase font-bold tracking-wider">
-                  <th className="py-2.5 font-semibold">Order ID</th>
-                  <th className="py-2.5 font-semibold">Date/Time</th>
-                  <th className="py-2.5 font-semibold">Table</th>
-                  <th className="py-2.5 font-semibold">Source</th>
-                  <th className="py-2.5 font-semibold">Qty Purchased</th>
-                  <th className="py-2.5 font-semibold">Unit Price</th>
-                  <th className="py-2.5 font-semibold text-right">Order Total</th>
+                  <th className="py-2.5 font-semibold">Item Name</th>
+                  <th className="py-2.5 font-semibold text-center">Quantity Sold</th>
+                  <th className="py-2.5 font-semibold text-right">Avg Unit Price</th>
+                  <th className="py-2.5 font-semibold text-right">Total Revenue</th>
+                  <th className="py-2.5 font-semibold text-right">Revenue Share</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-50 font-medium text-neutral-700">
-                {itemStats.itemOrders.length === 0 ? (
+                {allItemsStats.itemsList.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="py-6 text-center text-neutral-400 font-medium">
-                      No matching transactions to show.
+                    <td colSpan="5" className="py-6 text-center text-neutral-400 font-medium">
+                      No sales recorded in this timeframe.
                     </td>
                   </tr>
                 ) : (
-                  itemStats.itemOrders.slice(0, 8).map((order) => {
-                    const date = new Date(order.createdAt)
-                    const formattedDate = date.toLocaleString(undefined, {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                    
-                    const itemMatch = order.items.find((it) => it.name === detailedItemName) || {}
-                    const qty = itemMatch.qty || 1
-                    const price = itemMatch.price || 0
-
-                    return (
-                      <tr key={order.id} className="hover:bg-neutral-50/50">
-                        <td className="py-3 font-mono font-bold text-neutral-900">#{order.id}</td>
-                        <td className="py-3 text-neutral-500">{formattedDate}</td>
-                        <td className="py-3">
-                          {order.tableNumber !== undefined && order.tableNumber !== null
-                            ? `Table ${order.tableNumber}`
-                            : 'Walk-in'}
-                        </td>
-                        <td className="py-3 text-neutral-500">
-                          <span className="badge-green font-bold text-[10px]">
-                            {order.source || 'COUNTER'}
-                          </span>
-                        </td>
-                        <td className="py-3 font-bold text-neutral-800">{qty}</td>
-                        <td className="py-3 text-neutral-600">
-                          {currencySymbol}
-                          {Number(price).toFixed(2)}
-                        </td>
-                        <td className="py-3 text-right font-extrabold text-neutral-900">
-                          {currencySymbol}
-                          {Number(order.total || 0).toFixed(2)}
-                        </td>
-                      </tr>
-                    )
-                  })
+                  allItemsStats.itemsList.map((item) => (
+                    <tr key={item.name} className="hover:bg-neutral-50/50">
+                      <td className="py-3 font-bold text-neutral-900">{item.name}</td>
+                      <td className="py-3 text-center text-neutral-800 font-semibold">{item.qty}</td>
+                      <td className="py-3 text-right text-neutral-600">
+                        {currencySymbol}
+                        {item.avgPrice.toFixed(2)}
+                      </td>
+                      <td className="py-3 text-right font-extrabold text-neutral-900">
+                        {currencySymbol}
+                        {item.revenue.toFixed(2)}
+                      </td>
+                      <td className="py-3 text-right">
+                        <span className="badge-green font-bold text-[10px]">
+                          {item.contributionPct.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -1158,11 +1015,6 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
             </div>
             <button
               onClick={() => {
-                if (stats.popularItemsList.length > 0) {
-                  setDetailedItemName(stats.popularItemsList[0].name)
-                } else if (allUniqueItems.length > 0) {
-                  setDetailedItemName(allUniqueItems[0])
-                }
                 setViewMode('detailed-items')
               }}
               className="text-xs font-semibold text-green-600 hover:text-green-700 hover:underline transition"
