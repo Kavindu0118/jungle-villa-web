@@ -1,5 +1,7 @@
 import Toggle from '../Toggle'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { initializeApp, deleteApp } from 'firebase/app'
+import { getFirestore, collection, getDocs, limit, query } from 'firebase/firestore'
 
 export default function SettingsScreen({
   restaurantSettings,
@@ -19,7 +21,8 @@ export default function SettingsScreen({
   tableTrackingEnabled,
   tableCount,
   handleToggleTableTracking,
-  handleTableCountChange
+  handleTableCountChange,
+  handleUpdateBackupDatabase
 }) {
   const [editingName, setEditingName] = useState(false)
   const [editingSlug, setEditingSlug] = useState(false)
@@ -70,10 +73,95 @@ export default function SettingsScreen({
     setEditingAddress(false)
   }
 
-  const handleCancelPhone = () => {
-    setTempPhone(restaurantSettings?.phone || '')
-    setEditingPhone(false)
+  const [dbApiKey, setDbApiKey] = useState(profile?.backupDatabase?.apiKey || '')
+  const [dbAuthDomain, setDbAuthDomain] = useState(profile?.backupDatabase?.authDomain || '')
+  const [dbProjectId, setDbProjectId] = useState(profile?.backupDatabase?.projectId || '')
+  const [dbStorageBucket, setDbStorageBucket] = useState(profile?.backupDatabase?.storageBucket || '')
+  const [dbMessagingSenderId, setDbMessagingSenderId] = useState(profile?.backupDatabase?.messagingSenderId || '')
+  const [dbAppId, setDbAppId] = useState(profile?.backupDatabase?.appId || '')
+
+  const [testStatus, setTestStatus] = useState(null)
+  const [isSavingConfig, setIsSavingConfig] = useState(false)
+
+  useEffect(() => {
+    if (profile?.backupDatabase) {
+      setDbApiKey(profile.backupDatabase.apiKey || '')
+      setDbAuthDomain(profile.backupDatabase.authDomain || '')
+      setDbProjectId(profile.backupDatabase.projectId || '')
+      setDbStorageBucket(profile.backupDatabase.storageBucket || '')
+      setDbMessagingSenderId(profile.backupDatabase.messagingSenderId || '')
+      setDbAppId(profile.backupDatabase.appId || '')
+    }
+  }, [profile?.backupDatabase])
+
+  const handleTestConnection = async () => {
+    if (!dbApiKey.trim() || !dbProjectId.trim() || !dbAppId.trim()) {
+      setTestStatus({ type: 'error', message: 'API Key, Project ID, and App ID are required.' })
+      return
+    }
+
+    setTestStatus({ type: 'loading', message: 'Testing database connection...' })
+
+    const tempAppName = `test_connection_${Date.now()}`
+    let tempApp = null
+    try {
+      const config = {
+        apiKey: dbApiKey.trim(),
+        authDomain: dbAuthDomain.trim() || `${dbProjectId.trim()}.firebaseapp.com`,
+        projectId: dbProjectId.trim(),
+        storageBucket: dbStorageBucket.trim() || `${dbProjectId.trim()}.appspot.com`,
+        messagingSenderId: dbMessagingSenderId.trim(),
+        appId: dbAppId.trim(),
+      }
+
+      tempApp = initializeApp(config, tempAppName)
+      const tempDb = getFirestore(tempApp)
+      const testRef = collection(tempDb, 'orders')
+      const testQuery = query(testRef, limit(1))
+      
+      await getDocs(testQuery)
+      
+      setTestStatus({ type: 'success', message: 'Connection successful! Orders collection is accessible.' })
+    } catch (err) {
+      console.error('Test connection error:', err)
+      setTestStatus({ type: 'error', message: `Connection failed: ${err.message}` })
+    } finally {
+      if (tempApp) {
+        try {
+          await deleteApp(tempApp)
+        } catch (e) {
+          console.error('Error deleting temp app:', e)
+        }
+      }
+    }
   }
+
+  const handleSaveConfig = async () => {
+    if (!dbApiKey.trim() || !dbProjectId.trim() || !dbAppId.trim()) {
+      alert('API Key, Project ID, and App ID are required.')
+      return
+    }
+
+    setIsSavingConfig(true)
+    try {
+      const config = {
+        apiKey: dbApiKey.trim(),
+        authDomain: dbAuthDomain.trim(),
+        projectId: dbProjectId.trim(),
+        storageBucket: dbStorageBucket.trim(),
+        messagingSenderId: dbMessagingSenderId.trim(),
+        appId: dbAppId.trim(),
+      }
+      await handleUpdateBackupDatabase(config)
+      alert('Backup database connection saved successfully!')
+    } catch (err) {
+      console.error('Save config error:', err)
+      alert(`Failed to save: ${err.message}`)
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
+
   return (
     <div className="p-6 sm:p-8 max-w-2xl">
       <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">Settings</p>
@@ -424,6 +512,108 @@ export default function SettingsScreen({
             <p className="mt-1 text-sm text-neutral-500">Coming soon</p>
           </div>
           <Toggle on={false} onToggle={() => {}} disabled={true} />
+        </div>
+      </div>
+
+      {/* Backup Database Setup */}
+      <div className="card p-5 mb-4">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#16a34a' }}>Backup Database Setup</p>
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-500">
+            Connect a secondary Firebase Firestore database to feed live orders and sales data to the analytics dashboard.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1">API Key <span className="text-red-500">*</span></label>
+              <input
+                type="password"
+                value={dbApiKey}
+                onChange={(e) => setDbApiKey(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                placeholder="Enter Firebase API Key"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1">Project ID <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={dbProjectId}
+                onChange={(e) => setDbProjectId(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                placeholder="e.g. my-restaurant-pos"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1">App ID <span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                value={dbAppId}
+                onChange={(e) => setDbAppId(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                placeholder="e.g. 1:1234567890:web:abcdef123456"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1">Auth Domain (Optional)</label>
+              <input
+                type="text"
+                value={dbAuthDomain}
+                onChange={(e) => setDbAuthDomain(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                placeholder="e.g. my-restaurant-pos.firebaseapp.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1">Storage Bucket (Optional)</label>
+              <input
+                type="text"
+                value={dbStorageBucket}
+                onChange={(e) => setDbStorageBucket(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                placeholder="e.g. my-restaurant-pos.appspot.com"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-neutral-600 mb-1">Messaging Sender ID (Optional)</label>
+              <input
+                type="text"
+                value={dbMessagingSenderId}
+                onChange={(e) => setDbMessagingSenderId(e.target.value)}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-green-500"
+                placeholder="e.g. 123456789012"
+              />
+            </div>
+          </div>
+
+          {testStatus && (
+            <div className={`p-3 rounded-xl text-sm ${
+              testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
+              testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+              'bg-red-50 text-red-800 border border-red-200'
+            }`}>
+              {testStatus.message}
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={isRestaurantUpdating || isSavingConfig}
+              className="btn-ghost flex-1 py-2.5 text-sm font-semibold"
+            >
+              Test Connection
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveConfig}
+              disabled={isRestaurantUpdating || isSavingConfig || !dbApiKey || !dbProjectId || !dbAppId}
+              className="btn-green flex-1 py-2.5 text-sm font-semibold"
+            >
+              {isSavingConfig ? 'Saving...' : 'Save Configuration'}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -7,11 +7,12 @@ import QRCode from 'qrcode'
 import { jsPDF } from 'jspdf'
 import { cloneTemplate, findTemplateById, menuTemplates } from './data/menuTemplates'
 import DashboardScreen from './components/screens/DashboardScreen'
+import AnalyticsScreen from './components/screens/AnalyticsScreen'
 import MyMenuScreen from './components/screens/MyMenuScreen'
 import SettingsScreen from './components/screens/SettingsScreen'
 import ProfileScreen from './components/screens/ProfileScreen'
 import {
-  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX
+  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX, IconAnalytics
 } from './components/Icons'
 import {
   saveMenuRecord,
@@ -815,6 +816,14 @@ function Editor() {
     setIsRestaurantUpdating(false)
   }
 
+  const handleUpdateBackupDatabase = async (backupConfig) => {
+    if (!user) return
+    setProfile((c) => ({ ...c, backupDatabase: backupConfig }))
+    setIsRestaurantUpdating(true)
+    await saveUserProfile(user.uid, { backupDatabase: backupConfig })
+    setIsRestaurantUpdating(false)
+  }
+
 
 
   const currencySymbol = restaurantSettings?.currency === 'LKR' ? 'Rs. ' : '$'
@@ -1138,6 +1147,7 @@ function Editor() {
   // ── Sidebar ───────────────────────────────────────────────────────────────
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard /> },
+    { id: 'analytics', label: 'Analytics', icon: <IconAnalytics /> },
     { id: 'my-menu', label: 'My Menu', icon: <IconMenu /> },
     { id: 'settings', label: 'Settings', icon: <IconSettings /> },
     { id: 'profile', label: 'Profile', icon: <IconProfile /> },
@@ -1587,6 +1597,11 @@ function Editor() {
           handleDeleteMenu={handleDeleteMenu}
           isDeletingMenu={isDeletingMenu}
         />}
+        {activeSection === 'analytics' && <AnalyticsScreen
+          profile={profile}
+          restaurantSettings={restaurantSettings}
+          setActiveSection={setActiveSection}
+        />}
         {activeSection === 'settings' && <SettingsScreen
           restaurantSettings={restaurantSettings}
           profile={profile}
@@ -1610,6 +1625,7 @@ function Editor() {
           handleTableCountChange={
           handleTableCountChange
           }
+          handleUpdateBackupDatabase={handleUpdateBackupDatabase}
         />}
         {activeSection === 'profile' && <ProfileScreen
           user={user}
