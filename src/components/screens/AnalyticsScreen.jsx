@@ -279,87 +279,7 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
     return d
   }, [chartPoints, chartPath])
 
-  // Render unconfigured UI state
-  if (!isConfigured) {
-    return (
-      <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[70vh] max-w-xl mx-auto text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl" style={{ background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)' }}>
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10" />
-            <line x1="12" y1="20" x2="12" y2="4" />
-            <line x1="6" y1="20" x2="6" y2="14" />
-          </svg>
-        </div>
-        <h2 className="text-2xl font-bold text-neutral-900">Unlock Restaurant Analytics</h2>
-        <p className="mt-3 text-sm text-neutral-500 leading-relaxed">
-          Link your restaurant POS cloud database in Settings to access live revenue data, order tracking, popular menu item insights, and fee breakdowns.
-        </p>
-        <button
-          onClick={() => setActiveSection('settings')}
-          className="btn-green mt-8 flex items-center gap-2 px-6 py-3 font-semibold"
-        >
-          Setup Database Connection
-        </button>
-      </div>
-    )
-  }
 
-  // Render loading state
-  if (loading) {
-    return (
-      <div className="p-6 sm:p-8 space-y-6">
-        <div className="flex items-center justify-between border-b pb-4">
-          <div className="h-8 w-48 bg-neutral-200 rounded animate-pulse" />
-          <div className="h-10 w-32 bg-neutral-200 rounded animate-pulse" />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-28 bg-white border border-neutral-100 rounded-2xl p-5 space-y-3 shadow-sm animate-pulse">
-              <div className="h-4 w-20 bg-neutral-200 rounded" />
-              <div className="h-8 w-28 bg-neutral-200 rounded" />
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 h-72 bg-white border border-neutral-100 rounded-2xl shadow-sm animate-pulse" />
-          <div className="h-72 bg-white border border-neutral-100 rounded-2xl shadow-sm animate-pulse" />
-        </div>
-      </div>
-    )
-  }
-
-  // Render error state
-  if (error) {
-    return (
-      <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[70vh] max-w-xl mx-auto text-center">
-        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-red-50 text-red-500">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-        <h2 className="text-xl font-bold text-neutral-900">Database Connection Failed</h2>
-        <p className="mt-3 text-sm text-red-600 leading-relaxed border border-red-200 bg-red-50/50 p-4 rounded-xl font-mono text-left text-xs max-w-lg">
-          {error}
-        </p>
-        <div className="mt-8 flex gap-4">
-          <button
-            onClick={() => window.location.reload()}
-            className="btn-ghost px-5 py-2.5 font-semibold text-sm"
-          >
-            Retry Connection
-          </button>
-          <button
-            onClick={() => setActiveSection('settings')}
-            className="btn-green px-5 py-2.5 font-semibold text-sm"
-          >
-            Check Credentials
-          </button>
-        </div>
-      </div>
-    )
-  }
 
   const allUniqueItems = useMemo(() => {
     const names = new Set()
@@ -550,6 +470,88 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
   }, [detailedChartPoints, detailedChartPath])
 
   const currencySymbol = restaurantSettings?.currency === 'LKR' ? 'Rs. ' : '$'
+
+  // Render unconfigured UI state
+  if (!isConfigured) {
+    return (
+      <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[70vh] max-w-xl mx-auto text-center">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl" style={{ background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)' }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
+          </svg>
+        </div>
+        <h2 className="text-2xl font-bold text-neutral-900">Unlock Restaurant Analytics</h2>
+        <p className="mt-3 text-sm text-neutral-500 leading-relaxed">
+          Link your restaurant POS cloud database in Settings to access live revenue data, order tracking, popular menu item insights, and fee breakdowns.
+        </p>
+        <button
+          onClick={() => setActiveSection('settings')}
+          className="btn-green mt-8 flex items-center gap-2 px-6 py-3 font-semibold"
+        >
+          Setup Database Connection
+        </button>
+      </div>
+    )
+  }
+
+  // Render loading state
+  if (loading) {
+    return (
+      <div className="p-6 sm:p-8 space-y-6">
+        <div className="flex items-center justify-between border-b pb-4">
+          <div className="h-8 w-48 bg-neutral-200 rounded animate-pulse" />
+          <div className="h-10 w-32 bg-neutral-200 rounded animate-pulse" />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-28 bg-white border border-neutral-100 rounded-2xl p-5 space-y-3 shadow-sm animate-pulse">
+              <div className="h-4 w-20 bg-neutral-200 rounded" />
+              <div className="h-8 w-28 bg-neutral-200 rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-72 bg-white border border-neutral-100 rounded-2xl shadow-sm animate-pulse" />
+          <div className="h-72 bg-white border border-neutral-100 rounded-2xl shadow-sm animate-pulse" />
+        </div>
+      </div>
+    )
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div className="p-6 sm:p-8 flex flex-col items-center justify-center min-h-[70vh] max-w-xl mx-auto text-center">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-red-50 text-red-500">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-neutral-900">Database Connection Failed</h2>
+        <p className="mt-3 text-sm text-red-600 leading-relaxed border border-red-200 bg-red-50/50 p-4 rounded-xl font-mono text-left text-xs max-w-lg">
+          {error}
+        </p>
+        <div className="mt-8 flex gap-4">
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-ghost px-5 py-2.5 font-semibold text-sm"
+          >
+            Retry Connection
+          </button>
+          <button
+            onClick={() => setActiveSection('settings')}
+            className="btn-green px-5 py-2.5 font-semibold text-sm"
+          >
+            Check Credentials
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (viewMode === 'detailed-items') {
     const itemStats = itemDetailedStats || {
