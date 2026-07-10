@@ -25,6 +25,9 @@ import {
   subscribeToRestaurantOrder,
   cancelRestaurantOrder,
   deleteMenuRecord,
+  getWaiterCodes,
+  addWaiterCode,
+  deleteWaiterCode,
 } from './lib/menuStorage'
 
 import { uploadMenuItemImage, isSupabaseConfigured } from './lib/supabase'
@@ -593,6 +596,11 @@ function Editor() {
   const [isRestaurantUpdating, setIsRestaurantUpdating] = useState(false)
   const restaurantId = profile?.restaurantId || null
 
+  // Waiter codes state
+  const [waiterCodes, setWaiterCodes] = useState([])
+  const [isWaiterCodesLoading, setIsWaiterCodesLoading] = useState(false)
+  const [isWaiterCodesUpdating, setIsWaiterCodesUpdating] = useState(false)
+
   // Auth
   useEffect(() => {
     if (auth) return onAuthStateChanged(auth, setUser)
@@ -715,6 +723,54 @@ function Editor() {
     loadSettings()
     return () => { isActive = false }
   }, [restaurantId, profile])
+
+  // Load waiter codes
+  useEffect(() => {
+    let isActive = true
+    const loadWaiterCodes = async () => {
+      if (!restaurantId) {
+        setWaiterCodes([])
+        return
+      }
+      setIsWaiterCodesLoading(true)
+      const codes = await getWaiterCodes(restaurantId)
+      if (isActive) {
+        setWaiterCodes(codes)
+        setIsWaiterCodesLoading(false)
+      }
+    }
+    loadWaiterCodes()
+    return () => {
+      isActive = false
+    }
+  }, [restaurantId])
+
+  const handleAddWaiterCode = async (code) => {
+    if (!restaurantId) return
+    setIsWaiterCodesUpdating(true)
+    const success = await addWaiterCode(restaurantId, code)
+    if (success) {
+      const updated = await getWaiterCodes(restaurantId)
+      setWaiterCodes(updated)
+    } else {
+      alert('Failed to add waiter code.')
+    }
+    setIsWaiterCodesUpdating(false)
+  }
+
+  const handleDeleteWaiterCode = async (code) => {
+    if (!restaurantId) return
+    setIsWaiterCodesUpdating(true)
+    const success = await deleteWaiterCode(restaurantId, code)
+    if (success) {
+      const updated = await getWaiterCodes(restaurantId)
+      setWaiterCodes(updated)
+    } else {
+      alert('Failed to delete waiter code.')
+    }
+    setIsWaiterCodesUpdating(false)
+  }
+
 
   // Close builder on Escape
   useEffect(() => {
@@ -1626,6 +1682,11 @@ function Editor() {
           handleTableCountChange
           }
           handleUpdateBackupDatabase={handleUpdateBackupDatabase}
+          waiterCodes={waiterCodes}
+          isWaiterCodesLoading={isWaiterCodesLoading}
+          isWaiterCodesUpdating={isWaiterCodesUpdating}
+          onAddWaiterCode={handleAddWaiterCode}
+          onDeleteWaiterCode={handleDeleteWaiterCode}
         />}
         {activeSection === 'profile' && <ProfileScreen
           user={user}

@@ -2,6 +2,7 @@ import Toggle from '../Toggle'
 import { useState, useEffect } from 'react'
 import { initializeApp, deleteApp } from 'firebase/app'
 import { getFirestore, collection, getDocs, limit, query } from 'firebase/firestore'
+import { IconTrash } from '../Icons'
 
 export default function SettingsScreen({
   restaurantSettings,
@@ -22,7 +23,12 @@ export default function SettingsScreen({
   tableCount,
   handleToggleTableTracking,
   handleTableCountChange,
-  handleUpdateBackupDatabase
+  handleUpdateBackupDatabase,
+  waiterCodes = [],
+  isWaiterCodesLoading = false,
+  isWaiterCodesUpdating = false,
+  onAddWaiterCode,
+  onDeleteWaiterCode,
 }) {
   const [editingName, setEditingName] = useState(false)
   const [editingSlug, setEditingSlug] = useState(false)
@@ -33,6 +39,22 @@ export default function SettingsScreen({
   const [tempSlug, setTempSlug] = useState(restaurantSettings?.slug || '')
   const [tempAddress, setTempAddress] = useState(restaurantSettings?.address || '')
   const [tempPhone, setTempPhone] = useState(restaurantSettings?.phone || '')
+
+  const [newCode, setNewCode] = useState('')
+
+  const handleAddCode = async () => {
+    const trimmed = newCode.trim()
+    if (trimmed.length < 5) {
+      alert('Code must be at least 5 characters long.')
+      return
+    }
+    if (waiterCodes.some(item => item.code.toLowerCase() === trimmed.toLowerCase())) {
+      alert('This waiter code already exists.')
+      return
+    }
+    await onAddWaiterCode(trimmed)
+    setNewCode('')
+  }
 
   const handleSaveName = async () => {
     if (tempName.trim()) {
@@ -691,6 +713,73 @@ export default function SettingsScreen({
             </>
           )}
         </div>
+      </div>
+
+      {/* Waiter Codes */}
+      <div className="card p-5 mb-4">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#16a34a' }}>Waiter Codes</p>
+        <p className="text-sm text-neutral-500 mb-4">
+          Manage up to 10 one-time codes (minimum 5 characters) for authenticating waiters.
+        </p>
+
+        {isWaiterCodesLoading ? (
+          <div className="text-sm text-neutral-500 py-2">Loading waiter codes...</div>
+        ) : waiterCodes.length === 0 ? (
+          <div className="text-sm text-neutral-500 bg-neutral-50 p-4 rounded-xl border border-dashed border-neutral-200 text-center mb-4">
+            No waiter codes added yet.
+          </div>
+        ) : (
+          <div className="space-y-2 mb-4">
+            {waiterCodes.map(({ code, used }) => (
+              <div key={code} className="flex items-center justify-between p-3 rounded-xl border border-neutral-100 bg-neutral-50/50">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-sm font-semibold text-neutral-800">{code}</span>
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                    used 
+                      ? 'bg-red-50 text-red-700 border border-red-100' 
+                      : 'bg-green-50 text-green-700 border border-green-100'
+                  }`}>
+                    {used ? 'Used' : 'Not Used'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  disabled={isWaiterCodesUpdating}
+                  onClick={() => onDeleteWaiterCode(code)}
+                  className="text-neutral-400 hover:text-red-600 transition disabled:opacity-50"
+                  title="Delete waiter code"
+                >
+                  <IconTrash />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {waiterCodes.length < 10 ? (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value.replace(/\s+/g, ''))}
+              disabled={isWaiterCodesUpdating}
+              placeholder="Enter code (min 5 chars)"
+              className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-green-500"
+            />
+            <button
+              type="button"
+              onClick={handleAddCode}
+              disabled={isWaiterCodesUpdating || newCode.trim().length < 5}
+              className="btn-green px-4 py-2 text-sm font-semibold whitespace-nowrap"
+            >
+              Add Code
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-amber-600">
+            ✓ Maximum limit of 10 waiter codes reached. Delete an existing code to add a new one.
+          </p>
+        )}
       </div>
 
       {/* Danger Zone */}

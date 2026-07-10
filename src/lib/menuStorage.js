@@ -10,6 +10,8 @@ import {
   serverTimestamp,
   onSnapshot,
   deleteDoc,
+  updateDoc,
+  deleteField,
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from './firebase'
 
@@ -295,6 +297,44 @@ export const deleteMenuRecord = async (restaurantId) => {
     return true
   } catch (error) {
     console.error("Error deleting menu:", error)
+    return false
+  }
+}
+
+export const getWaiterCodes = async (restaurantId) => {
+  if (!isFirebaseConfigured || !db || !restaurantId) return []
+  try {
+    const docRef = doc(db, 'waiterCodes', restaurantId)
+    const snap = await getDoc(docRef)
+    if (!snap.exists()) return []
+    const data = snap.data()
+    return Object.entries(data).map(([code, used]) => ({ code, used }))
+  } catch (error) {
+    console.error("Error getting waiter codes:", error)
+    return []
+  }
+}
+
+export const addWaiterCode = async (restaurantId, code) => {
+  if (!isFirebaseConfigured || !db || !restaurantId) return false
+  try {
+    const docRef = doc(db, 'waiterCodes', restaurantId)
+    await setDoc(docRef, { [code]: false }, { merge: true })
+    return true
+  } catch (error) {
+    console.error("Error adding waiter code:", error)
+    return false
+  }
+}
+
+export const deleteWaiterCode = async (restaurantId, code) => {
+  if (!isFirebaseConfigured || !db || !restaurantId) return false
+  try {
+    const docRef = doc(db, 'waiterCodes', restaurantId)
+    await updateDoc(docRef, { [code]: deleteField() })
+    return true
+  } catch (error) {
+    console.error("Error deleting waiter code:", error)
     return false
   }
 }
