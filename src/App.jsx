@@ -1753,6 +1753,7 @@ function MenuViewer() {
   const [restaurantSettings, setRestaurantSettings] = useState(null)
   const [cartItems, setCartItems] = useState([])
   const [customerName, setCustomerName] = useState('')
+  const [specialNote, setSpecialNote] = useState('')
   const [activeOrderId, setActiveOrderId] = useState(null)
   const [orderData, setOrderData] = useState(null)
   const [orderError, setOrderError] = useState('')
@@ -1995,7 +1996,8 @@ function MenuViewer() {
     customerName:
       customerName.trim(),
 
-
+    specialNote:
+      specialNote.trim(),
 
     subtotal: newSubtotal,
 
@@ -2058,6 +2060,7 @@ function MenuViewer() {
     setActiveOrderId(orderId)
 
     setCartItems([])
+    setSpecialNote('')
 
   }
   else{
@@ -2172,6 +2175,12 @@ function MenuViewer() {
                   )
                 })}
               </div>
+              {orderData?.specialNote && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-amber-700">Special note</p>
+                  <p className="mt-1 text-sm text-amber-900">{orderData.specialNote}</p>
+                </div>
+              )}
               <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-neutral-600">
@@ -2239,6 +2248,12 @@ function MenuViewer() {
                   )
                 })}
               </div>
+              {orderData?.specialNote && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-[0.7rem] font-semibold uppercase tracking-[0.15em] text-amber-700">Special note</p>
+                  <p className="mt-1 text-sm text-amber-900">{orderData.specialNote}</p>
+                </div>
+              )}
               <div className="mt-4 border-t border-dashed border-neutral-300 pt-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-sm text-neutral-600">
@@ -2287,6 +2302,17 @@ function MenuViewer() {
               onChange={(e) => setCustomerName(e.target.value)}
               className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-neutral-900"
               placeholder="Enter your name"
+            />
+          </label>
+
+          <label className="text-sm text-neutral-600">
+            <span className="mb-2 block font-medium text-neutral-900">Special note</span>
+            <textarea
+              value={specialNote}
+              onChange={(e) => setSpecialNote(e.target.value)}
+              rows={3}
+              className="w-full rounded-xl border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-neutral-900"
+              placeholder="Any allergies, spice preference, or delivery instructions?"
             />
           </label>
 
