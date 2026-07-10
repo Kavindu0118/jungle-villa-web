@@ -1825,6 +1825,22 @@ function MenuViewer() {
   const [showCartDrawer, setShowCartDrawer] = useState(false)
 
   const orderStorageKey = id ? `qr-order-${id}` : null
+  const historyStorageKey = id ? `qr-order-history-${id}` : null
+  const [orderHistory, setOrderHistory] = useState([])
+
+  // Load history from localStorage
+  useEffect(() => {
+    if (historyStorageKey) {
+      const stored = window.localStorage.getItem(historyStorageKey)
+      if (stored) {
+        try {
+          setOrderHistory(JSON.parse(stored))
+        } catch (e) {
+          console.error('Error parsing order history:', e)
+        }
+      }
+    }
+  }, [historyStorageKey])
 
   const clearOrder = useCallback(() => {
     if (orderStorageKey) window.localStorage.removeItem(orderStorageKey)
@@ -1964,12 +1980,38 @@ function MenuViewer() {
     return () => { unsubscribe() }
   }, [menuData, activeOrderId, clearOrder])
 
+  // Save order to history if confirmed
+  useEffect(() => {
+    if (!orderData || !historyStorageKey) return
+    const rawStatus = (orderData.status || '').trim().toLowerCase()
+    if (['confirm', 'confirmed'].includes(rawStatus)) {
+      setOrderHistory((prevHistory) => {
+        const exists = prevHistory.some(o => o.orderId === orderData.id)
+        if (exists) return prevHistory
+
+        const newEntry = {
+          orderId: orderData.id,
+          dateTime: new Date().toLocaleString(),
+          items: orderData.items || [],
+          totalAmount: Number(orderData.totalAmount || 0),
+          currency: orderData.currency || 'USD',
+          tableNo: orderData.tableNo || null,
+        }
+        const updated = [newEntry, ...prevHistory]
+        window.localStorage.setItem(historyStorageKey, JSON.stringify(updated))
+        return updated
+      })
+    }
+  }, [orderData, historyStorageKey])
+
   const allowOnlineOrders = Boolean(restaurantSettings?.allowOnlineOrders)
   const rawOrderStatus = (orderData?.status || '').trim().toLowerCase()
   const orderStatus = ['complete', 'completed', 'delivered'].includes(rawOrderStatus)
     ? 'completed'
-    : rawOrderStatus || null
-  const hasActiveOrder = Boolean(activeOrderId && orderStatus !== 'completed')
+    : ['confirm', 'confirmed'].includes(rawOrderStatus)
+      ? 'confirmed'
+      : rawOrderStatus || null
+  const hasActiveOrder = Boolean(activeOrderId && !['completed', 'confirmed'].includes(orderStatus))
 
   const addToCart = (item) => {
     if (hasActiveOrder) return
@@ -2281,10 +2323,14 @@ function MenuViewer() {
           </div>
         )}
 
-      {allowOnlineOrders && orderStatus === 'completed' && (
+      {allowOnlineOrders && ['completed', 'confirmed'].includes(orderStatus) && (
         <div className="mt-4 space-y-4">
           <div className="flex items-center justify-between gap-3 text-sm text-neutral-600">
-            <p>Your order is completed. You can start a new order anytime.</p>
+            <p>
+              {orderStatus === 'confirmed'
+                ? 'Your order is confirmed. You can start a new order anytime.'
+                : 'Your order is completed. You can start a new order anytime.'}
+            </p>
             <button type="button" onClick={clearOrder}
               className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 transition hover:border-neutral-900">
               Start new order
@@ -2354,7 +2400,7 @@ function MenuViewer() {
         </div>
       )}
 
-      {allowOnlineOrders && !hasActiveOrder && orderStatus !== 'completed' && (
+      {allowOnlineOrders && !hasActiveOrder && !['completed', 'confirmed'].includes(orderStatus) && (
         <div className="mt-4 space-y-4">
           <label className="text-sm text-neutral-600">
             <span className="mb-2 block font-medium text-neutral-900">Your name</span>
@@ -2464,6 +2510,42 @@ function MenuViewer() {
           <div className="md:hidden">
             {menuPreviewEl}
           </div>
+
+          {/* Order History */}
+          {orderHistory.length > 0 && (
+            <div className="rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-neutral-900 mb-4 flex items-center gap-2 border-b border-neutral-100 pb-3">
+                <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+                Order History
+              </h3>
+              <div className="space-y-4 divide-y divide-neutral-100">
+                {orderHistory.map((historyOrder, idx) => (
+                  <div key={historyOrder.orderId} className={idx > 0 ? "pt-4" : ""}>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <div>
+                        <p className="font-semibold text-neutral-800">
+                          Order #{historyOrder.orderId.slice(-6).toUpperCase()}
+                          {historyOrder.tableNo && ` (Table ${historyOrder.tableNo})`}
+                        </p>
+                        <p className="text-xs text-neutral-500 mt-0.5">{historyOrder.dateTime}</p>
+                      </div>
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Confirmed
+                      </span>
+                    </div>
+                    <div className="mt-2.5 text-xs text-neutral-600">
+                      {historyOrder.items.map((item) => `${item.name} x${item.qty}`).join(', ')}
+                    </div>
+                    <div className="mt-2 text-xs font-mono font-bold text-neutral-900 text-right">
+                      Total: {historyOrder.currency === 'LKR' ? 'Rs. ' : '$'}{historyOrder.totalAmount.toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
