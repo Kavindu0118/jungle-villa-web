@@ -1173,6 +1173,7 @@ function Editor() {
     })
     setSaveStatus('Menu loaded for editing. Make changes and save.')
     setShowBuilder(true)
+    setActiveSection('dashboard')
   }
 
   const openNewMenuBuilder = () => {
@@ -1190,6 +1191,7 @@ function Editor() {
     })
     setSaveStatus('Start building your menu.')
     setShowBuilder(true)
+    setActiveSection('dashboard')
   }
 
   const handleDeleteMenu = async (menu) => {
@@ -1216,357 +1218,635 @@ function Editor() {
 
 
 
-  // ── Menu Builder Drawer ───────────────────────────────────────────────────
-  const BuilderDrawer = () => {
-    const renderItemRow = (sectionId, subcategoryId, item) => {
-      const isUploading = uploadingItems[item.id]
-      const handleFieldChange = (field, val) => {
-        if (subcategoryId) {
-          updateSubcategoryItemField(sectionId, subcategoryId, item.id, field, val)
-        } else {
-          updateItemField(sectionId, item.id, field, val)
-        }
+  // ── Menu Builder Inline Panel ───────────────────────────────────────────────────
+  const BuilderInlinePanel = () => {
+    const [activeTab, setActiveTab] = useState('items') // 'items' | 'setup'
+    const [editingItem, setEditingItem] = useState(null)
+    const [isAddingNew, setIsAddingNew] = useState(false)
+    const [uploadingItemImage, setUploadingItemImage] = useState({})
+
+    const handleSaveItem = (e) => {
+      e.preventDefault()
+      if (!editingItem) return
+      if (!editingItem.name.trim()) {
+        alert('Please enter an item name.')
+        return
       }
-      const handleRemove = () => {
-        if (subcategoryId) {
-          removeSubcategoryItem(sectionId, subcategoryId, item.id)
-        } else {
-          removeItem(sectionId, item.id)
-        }
+      if (!editingItem.sectionId) {
+        alert('Please select a category/section.')
+        return
       }
-      
-      return (
-        <div key={item.id} className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 sm:flex-row sm:items-center">
-          {/* Image Upload/Preview */}
-          <div className="flex-shrink-0 flex items-center justify-center">
-            {item.imageUrl ? (
-              <div className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-200">
-                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => handleFieldChange('imageUrl', '')}
-                  className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  title="Remove image"
-                >
-                  <IconTrash className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <label 
-                className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition ${
-                  isUploading 
-                    ? 'border-neutral-300 bg-neutral-50' 
-                    : !isSupabaseConfigured || !restaurantId
-                      ? 'border-neutral-200 bg-neutral-50/50 cursor-not-allowed opacity-50'
-                      : 'border-neutral-300 hover:border-green-500 bg-neutral-50/50 hover:bg-neutral-50'
-                }`}
-                title={
-                  !isSupabaseConfigured 
-                    ? "Supabase not configured" 
-                    : !restaurantId 
-                      ? "Onboarding not complete" 
-                      : "Upload image (up to 1MB)"
+
+      const { id, name, description, price, imageUrl, sectionId, subcategoryId } = editingItem
+
+      updateSectionList((sections) => {
+        // 1. Remove the item from its current location
+        let cleanedSections = sections.map((s) => {
+          const nextItems = s.items ? s.items.filter((it) => it.id !== id) : []
+          const nextSubs = s.subcategories ? s.subcategories.map((sub) => ({
+            ...sub,
+            items: sub.items ? sub.items.filter((it) => it.id !== id) : []
+          })) : []
+          return { ...s, items: nextItems, subcategories: nextSubs }
+        })
+
+        // 2. Add the item to the new target section / subcategory
+        return cleanedSections.map((s) => {
+          if (s.id !== sectionId) return s
+          
+          if (subcategoryId) {
+            return {
+              ...s,
+              subcategories: (s.subcategories || []).map((sub) => {
+                if (sub.id !== subcategoryId) return sub
+                return {
+                  ...sub,
+                  items: [...(sub.items || []), { id, name, description, price, imageUrl }]
                 }
-              >
-                {isUploading ? (
-                  <span className="text-[10px] text-neutral-500 animate-pulse font-medium">Uploading...</span>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span className="text-[9px] text-neutral-400 font-semibold mt-0.5">Add Image</span>
-                  </>
-                )}
-                {isSupabaseConfigured && restaurantId && (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={isUploading}
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      if (file.size > 1024 * 1024) {
-                        alert('Image size exceeds 1 MB limit. Please upload a smaller image.')
-                        return
-                      }
-                      try {
-                        setUploadingItems(prev => ({ ...prev, [item.id]: true }))
-                        const url = await uploadMenuItemImage(restaurantId, item.id, file)
-                        handleFieldChange('imageUrl', url)
-                      } catch (err) {
-                        alert(err.message || 'Failed to upload image')
-                      } finally {
-                        setUploadingItems(prev => ({ ...prev, [item.id]: false }))
-                      }
-                    }}
-                  />
-                )}
-              </label>
+              })
+            }
+          } else {
+            return {
+              ...s,
+              items: [...(s.items || []), { id, name, description, price, imageUrl }]
+            }
+          }
+        })
+      })
+
+      setEditingItem(null)
+      setIsAddingNew(false)
+    }
+
+    const handleDeleteItem = (itemId) => {
+      if (!window.confirm('Are you sure you want to delete this item?')) return
+      updateSectionList((sections) => {
+        return sections.map((s) => {
+          const nextItems = s.items ? s.items.filter((it) => it.id !== itemId) : []
+          const nextSubs = s.subcategories ? s.subcategories.map((sub) => ({
+            ...sub,
+            items: sub.items ? sub.items.filter((it) => it.id !== itemId) : []
+          })) : []
+          return { ...s, items: nextItems, subcategories: nextSubs }
+        })
+      })
+    }
+
+    const renderListItemRow = (item, sectionId, subcategoryId) => {
+      return (
+        <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 hover:border-green-300 bg-white hover:bg-neutral-50/50 shadow-sm transition duration-150 mb-2 group">
+          {/* Item image */}
+          <div className="h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden border border-neutral-200 bg-neutral-50 flex items-center justify-center">
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg">🍔</span>
             )}
           </div>
 
-          {/* Inputs */}
-          <div className="flex-1 grid gap-2 grid-cols-1 md:grid-cols-[1.5fr_2fr_1fr]">
-            <input value={item.name} onChange={(e) => handleFieldChange('name', e.target.value)}
-              placeholder="Item name" className="input-field text-sm" />
-            <input value={item.description} onChange={(e) => handleFieldChange('description', e.target.value)}
-              placeholder="Description" className="input-field text-sm" />
-            <div className="input-wrapper">
-              <span className="text-sm font-medium text-neutral-500 mr-1.5 whitespace-nowrap">{currencySymbol}</span>
-              <input 
-                value={item.price} 
-                onChange={(e) => {
-                  let val = e.target.value.replace(/[^0-9.]/g, '')
-                  const parts = val.split('.')
-                  if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('')
-                  handleFieldChange('price', val)
-                }}
-                placeholder="0.00" 
-              />
+          {/* Details */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <h4 className="font-semibold text-neutral-800 text-sm truncate">{item.name || 'Untitled Item'}</h4>
+              <span className="text-sm font-bold text-neutral-900">{currencySymbol}{item.price || '0.00'}</span>
             </div>
+            {item.description ? (
+              <p className="text-xs text-neutral-500 truncate mt-0.5">{item.description}</p>
+            ) : (
+              <p className="text-xs text-neutral-400 italic mt-0.5">No description</p>
+            )}
           </div>
 
-          <button type="button" onClick={handleRemove}
-            className="rounded-lg border border-neutral-200 px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600 self-stretch sm:self-auto flex items-center justify-center">
-            ×
-          </button>
+          {/* Actions */}
+          <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition duration-150 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setEditingItem({
+                  id: item.id,
+                  name: item.name,
+                  description: item.description,
+                  price: item.price,
+                  imageUrl: item.imageUrl,
+                  sectionId: sectionId,
+                  subcategoryId: subcategoryId || ''
+                })
+                setIsAddingNew(false)
+              }}
+              className="p-1 rounded-lg text-neutral-500 hover:text-green-600 hover:bg-green-50 transition"
+              title="Edit Item"
+            >
+              <IconEdit className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeleteItem(item.id)}
+              className="p-1 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition"
+              title="Delete Item"
+            >
+              <IconTrash className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )
     }
 
     return (
-      <>
-        <div className="drawer-overlay" onClick={() => setShowBuilder(false)} />
-        <div className="drawer-panel">
-          {/* Drawer Header */}
-          <div className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-neutral-100 bg-white px-6 py-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Menu Builder</p>
-              <h2 className="mt-0.5 text-lg font-bold text-neutral-900">
-                {selectedTemplate ? selectedTemplate.label : 'Select a Template'}
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={saveMenu}
-                disabled={!draftMenu || isSaving}
-                className="btn-green"
-              >
-                {isSaving ? 'Saving…' : 'Save Menu'}
-              </button>
-              <button onClick={() => setShowBuilder(false)} className="btn-ghost p-2">
-                <IconX />
-              </button>
-            </div>
+      <div className="flex flex-col h-full bg-white">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 border-b border-neutral-100 px-5 py-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Menu Workspace</p>
+            <h2 className="mt-0.5 text-base font-bold text-neutral-900 truncate max-w-[180px]">
+              {draftMenu?.menuTitle || 'Untitled Menu'}
+            </h2>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={saveMenu}
+              disabled={!draftMenu || isSaving}
+              className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1.5"
+            >
+              {isSaving ? 'Saving…' : 'Save'}
+            </button>
+            <button 
+              onClick={() => setShowBuilder(false)} 
+              className="btn-ghost p-1.5 rounded-lg border-neutral-200"
+              title="Close Builder"
+            >
+              <IconX className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
-          <div className="p-6 flex flex-col gap-6">
-            {/* Status bar */}
-            <div className="rounded-xl border px-4 py-2.5 text-sm" style={{ borderColor: '#dcfce7', background: '#f0fdf4', color: '#15803d' }}>
-              {saveStatus}
-            </div>
+        {/* Status bar */}
+        {saveStatus && (
+          <div className="px-5 py-2 text-xs border-b font-medium text-green-700 bg-green-50/50 border-neutral-100 flex items-center justify-between">
+            <span className="truncate">{saveStatus}</span>
+          </div>
+        )}
 
-            {/* Draft form */}
-            {draftMenu && (
-              <div className="flex flex-col gap-5">
-                {/* Basic fields */}
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Restaurant Name</span>
-                    <input
-                      value={draftMenu.restaurantName}
-                      onChange={(e) => updateDraft((d) => ({ ...d, restaurantName: e.target.value }))}
-                      className="input-field"
-                      placeholder="Name of restaurant"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Menu Title</span>
-                    <input
-                      value={draftMenu.menuTitle}
-                      onChange={(e) => updateDraft((d) => ({ ...d, menuTitle: e.target.value }))}
-                      className="input-field"
-                      placeholder="e.g. Dinner Menu"
-                    />
-                  </label>
-                </div>
-                <label className="block">
-                  <span className="mb-1.5 block text-sm font-semibold text-neutral-700">Menu Notes</span>
-                  <textarea
-                    value={draftMenu.notes}
-                    onChange={(e) => updateDraft((d) => ({ ...d, notes: e.target.value }))}
-                    rows={2}
-                    className="input-field"
-                    placeholder="Optional details, timings, or highlights"
-                  />
-                </label>
+        {/* Tab Buttons */}
+        <div className="flex border-b border-neutral-100 bg-neutral-50/50 p-1 gap-1">
+          <button
+            type="button"
+            onClick={() => { setActiveTab('items'); setEditingItem(null); setIsAddingNew(false) }}
+            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'items' ? 'bg-white shadow-xs text-green-700' : 'text-neutral-500 hover:text-neutral-800'}`}
+          >
+            📋 Menu Items
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveTab('setup'); setEditingItem(null); setIsAddingNew(false) }}
+            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'setup' ? 'bg-white shadow-xs text-green-700' : 'text-neutral-500 hover:text-neutral-800'}`}
+          >
+            ⚙️ Menu Setup
+          </button>
+        </div>
 
-                {/* Sections */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
+        {/* Tab Content */}
+        <div className="flex-1 overflow-y-auto p-5">
+          {activeTab === 'items' && (
+            <div className="space-y-4">
+              {editingItem ? (
+                /* Inline Add/Edit Form */
+                <form onSubmit={handleSaveItem} className="border border-green-200 bg-green-50/10 rounded-2xl p-4 space-y-4">
+                  <h3 className="font-bold text-sm text-neutral-800 border-b pb-2 mb-2 flex items-center justify-between">
+                    <span>{isAddingNew ? '✨ Add New Item' : '📝 Edit Item'}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => { setEditingItem(null); setIsAddingNew(false) }}
+                      className="text-xs text-neutral-400 hover:text-neutral-600"
+                    >
+                      Cancel
+                    </button>
+                  </h3>
+
+                  {/* Name & Price */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold text-neutral-700">Item Name</span>
+                        <input
+                          value={editingItem.name}
+                          onChange={(e) => setEditingItem(prev => ({ ...prev, name: e.target.value }))}
+                          className="input-field text-sm py-1.5 px-3 bg-white"
+                          placeholder="e.g. Garlic Pizza"
+                          required
+                        />
+                      </label>
+                    </div>
                     <div>
-                      <p className="text-sm font-semibold text-neutral-700">Sections & Items</p>
-                      {!isSupabaseConfigured && (
-                        <p className="text-xs text-amber-600 font-medium mt-0.5">
-                          ⚠️ Supabase credentials missing. Image uploads are disabled.
-                        </p>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold text-neutral-700">Price</span>
+                        <div className="input-wrapper py-1 bg-white">
+                          <span className="text-xs font-medium text-neutral-500 mr-1">{currencySymbol}</span>
+                          <input 
+                            value={editingItem.price} 
+                            onChange={(e) => {
+                              let val = e.target.value.replace(/[^0-9.]/g, '')
+                              const parts = val.split('.')
+                              if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('')
+                              setEditingItem(prev => ({ ...prev, price: val }))
+                            }}
+                            placeholder="0.00" 
+                            className="w-full text-sm outline-none bg-transparent"
+                            required
+                          />
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Category Selection */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-semibold text-neutral-700">Category</span>
+                        <select
+                          value={editingItem.sectionId}
+                          onChange={(e) => {
+                            const secId = e.target.value
+                            const section = draftMenu.sections.find(s => s.id === secId)
+                            const defaultSubId = section?.subcategories?.[0]?.id || ''
+                            setEditingItem(prev => ({
+                              ...prev,
+                              sectionId: secId,
+                              subcategoryId: defaultSubId
+                            }))
+                          }}
+                          className="input-field text-xs py-1.5 px-3 bg-white"
+                        >
+                          {draftMenu.sections.map(sec => (
+                            <option key={sec.id} value={sec.id}>{sec.title}</option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    {/* Subcategory */}
+                    {(() => {
+                      const selectedSection = draftMenu.sections.find(s => s.id === editingItem.sectionId)
+                      if (!selectedSection || !selectedSection.subcategories || selectedSection.subcategories.length === 0) return null
+                      return (
+                        <div>
+                          <label className="block">
+                            <span className="mb-1 block text-xs font-semibold text-neutral-700">Subcategory</span>
+                            <select
+                              value={editingItem.subcategoryId}
+                              onChange={(e) => setEditingItem(prev => ({ ...prev, subcategoryId: e.target.value }))}
+                              className="input-field text-xs py-1.5 px-3 bg-white"
+                            >
+                              <option value="">None (Direct Item)</option>
+                              {selectedSection.subcategories.map(sub => (
+                                <option key={sub.id} value={sub.id}>{sub.title}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-neutral-700">Description</span>
+                      <textarea
+                        value={editingItem.description}
+                        onChange={(e) => setEditingItem(prev => ({ ...prev, description: e.target.value }))}
+                        rows={2}
+                        className="input-field text-xs py-1.5 px-3 bg-white"
+                        placeholder="Ingredients, dietary details, or allergy info"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Image Upload */}
+                  <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-neutral-200">
+                    <div className="flex-shrink-0">
+                      {editingItem.imageUrl ? (
+                        <div className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-300">
+                          <img src={editingItem.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setEditingItem(prev => ({ ...prev, imageUrl: '' }))}
+                            className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            title="Remove image"
+                          >
+                            <IconTrash className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label 
+                          className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition ${
+                            uploadingItemImage[editingItem.id] 
+                              ? 'border-neutral-300 bg-neutral-100' 
+                              : !isSupabaseConfigured || !restaurantId
+                                ? 'border-neutral-200 bg-neutral-100/50 cursor-not-allowed opacity-50'
+                                : 'border-neutral-300 hover:border-green-500 bg-white hover:bg-neutral-50'
+                          }`}
+                        >
+                          {uploadingItemImage[editingItem.id] ? (
+                            <span className="text-[9px] text-neutral-500 animate-pulse font-medium">Uploading...</span>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                              </svg>
+                              <span className="text-[9px] text-neutral-400 font-semibold mt-0.5">Upload</span>
+                            </>
+                          )}
+                          {isSupabaseConfigured && restaurantId && (
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={uploadingItemImage[editingItem.id]}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                if (file.size > 1024 * 1024) {
+                                  alert('Image size exceeds 1 MB limit. Please upload a smaller image.')
+                                  return
+                                }
+                                try {
+                                  setUploadingItemImage(prev => ({ ...prev, [editingItem.id]: true }))
+                                  const url = await uploadMenuItemImage(restaurantId, editingItem.id, file)
+                                  setEditingItem(prev => ({ ...prev, imageUrl: url }))
+                                } catch (err) {
+                                  alert(err.message || 'Failed to upload image')
+                                } finally {
+                                  setUploadingItemImage(prev => ({ ...prev, [editingItem.id]: false }))
+                                }
+                              }}
+                            />
+                          )}
+                        </label>
                       )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-xs font-semibold text-neutral-700">Image Thumbnail</span>
+                      <span className="block text-[10px] text-neutral-500 mt-0.5 leading-normal">
+                        Max 1MB size. Fits square preview.
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Form Actions */}
+                  <div className="flex gap-2 justify-end pt-2">
                     <button
                       type="button"
-                      onClick={addSection}
-                      className="btn-ghost flex items-center gap-1 text-xs"
+                      onClick={() => { setEditingItem(null); setIsAddingNew(false) }}
+                      className="btn-ghost text-xs px-3 py-1.5 border-neutral-200"
                     >
-                      <IconPlus /> Add Section
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-green text-xs px-4 py-1.5"
+                    >
+                      {isAddingNew ? 'Add Item' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* Main List View */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Item Listings</h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (draftMenu.sections.length === 0) {
+                          alert('Please add a section/category under Setup tab first.')
+                          return
+                        }
+                        setEditingItem({
+                          id: createId('itm'),
+                          name: '',
+                          description: '',
+                          price: '',
+                          imageUrl: '',
+                          sectionId: draftMenu.sections[0].id,
+                          subcategoryId: ''
+                        })
+                        setIsAddingNew(true)
+                      }}
+                      className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1"
+                    >
+                      <IconPlus className="w-3.5 h-3.5" /> Add Item
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-4">
-                    {draftMenu.sections.map((section) => (
-                      <article key={section.id} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
-                        {/* Section Header */}
-                        <div className="mb-3 flex items-center gap-2">
-                          <input
-                            value={section.title}
-                            onChange={(e) => updateSectionField(section.id, e.target.value)}
-                            className="input-field text-sm font-semibold"
-                            style={{ background: 'white' }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeSection(section.id)}
-                            className="flex-shrink-0 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-600 transition hover:border-red-300 hover:text-red-600"
-                          >
-                            Remove
-                          </button>
-                        </div>
+                  {/* Grouped Listings */}
+                  {draftMenu?.sections.length === 0 ? (
+                    <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
+                      <p className="text-neutral-400 text-sm">No sections created yet.</p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('setup')}
+                        className="mt-2 text-xs font-semibold text-green-600 hover:underline"
+                      >
+                        Go to Setup to add categories
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      {draftMenu.sections.map((section) => {
+                        const directItems = section.items || []
+                        const subcategories = section.subcategories || []
+                        
+                        const hasItems = directItems.length > 0 || subcategories.some(sub => sub.items && sub.items.length > 0)
+                        
+                        return (
+                          <div key={section.id} className="bg-neutral-50/50 border border-neutral-100 rounded-xl p-3.5">
+                            {/* Section Title */}
+                            <div className="flex items-center justify-between border-b border-neutral-200/60 pb-1.5 mb-2.5">
+                              <h4 className="font-bold text-xs text-neutral-700 tracking-wider uppercase">{section.title}</h4>
+                            </div>
 
-                        {/* Subcategories or direct items */}
-                        {section.subcategories && section.subcategories.length > 0 ? (
-                          <div className="flex flex-col gap-4 pl-4 border-l-2 border-green-200 mt-2">
-                            {section.subcategories.map((sub) => (
-                              <div key={sub.id} className="rounded-xl border border-neutral-200 bg-white p-3.5 shadow-sm">
-                                {/* Subcategory Header */}
-                                <div className="mb-3 flex items-center justify-between gap-2">
-                                  <input
-                                    value={sub.title}
-                                    onChange={(e) => updateSubcategoryTitle(section.id, sub.id, e.target.value)}
-                                    className="input-field text-xs font-bold uppercase tracking-wider text-neutral-600 bg-neutral-50/50 w-full max-w-[250px]"
-                                    placeholder="Subcategory Title"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => removeSubcategory(section.id, sub.id)}
-                                    className="rounded-lg border border-neutral-200 bg-white px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 hover:border-red-200 transition"
-                                  >
-                                    Remove Sub
-                                  </button>
+                            {/* Direct items */}
+                            {directItems.map(item => renderListItemRow(item, section.id, null))}
+
+                            {/* Subcategories */}
+                            {subcategories.map(sub => (
+                              <div key={sub.id} className="mt-3 pl-2.5 border-l-2 border-green-200 space-y-1.5">
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                  <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{sub.title}</span>
                                 </div>
-                                
-                                {/* Subcategory Items */}
-                                <div className="flex flex-col gap-2">
-                                  {sub.items.map((item) => renderItemRow(section.id, sub.id, item))}
-                                </div>
-                                
-                                {/* Add Item to Subcategory */}
-                                <button
-                                  type="button"
-                                  onClick={() => addSubcategoryItem(section.id, sub.id)}
-                                  className="mt-3 flex items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-600 transition hover:border-green-400 hover:text-green-700"
-                                >
-                                  <IconPlus /> Add Item
-                                </button>
+                                {sub.items && sub.items.map(item => renderListItemRow(item, section.id, sub.id))}
+                                {(!sub.items || sub.items.length === 0) && (
+                                  <p className="text-[10px] text-neutral-400 italic">No items here.</p>
+                                )}
                               </div>
                             ))}
-                            
-                            {/* Add Subcategory */}
-                            <button
-                              type="button"
-                              onClick={() => addSubcategory(section.id)}
-                              className="self-start mt-1 flex items-center gap-1 rounded-lg border border-dashed border-green-300 bg-green-50/50 px-3 py-2 text-xs font-medium text-green-700 transition hover:bg-green-50 hover:border-green-400"
-                            >
-                              <IconPlus /> Add Subcategory
-                            </button>
+
+                            {!hasItems && (
+                              <p className="text-[11px] text-neutral-400 italic text-center py-2">No items in this category yet.</p>
+                            )}
                           </div>
-                        ) : (
-                          <>
-                            {/* Direct Items */}
-                            <div className="flex flex-col gap-2">
-                              {section.items.map((item) => renderItemRow(section.id, null, item))}
-                            </div>
-                            
-                            {/* Add buttons */}
-                            <div className="mt-3 flex gap-2">
-                              <button
-                                type="button"
-                                onClick={() => addItem(section.id)}
-                                className="flex items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 transition hover:border-green-400 hover:text-green-700"
-                              >
-                                <IconPlus /> Add Item
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => addSubcategory(section.id)}
-                                className="flex items-center gap-1 rounded-lg border border-dashed border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-600 transition hover:border-green-400 hover:text-green-700"
-                              >
-                                <IconPlus /> Add Subcategory
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </article>
-                    ))}
-                  </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-          {/* Template Selector */}
-          <div>
-            <p className="mb-3 text-sm font-semibold text-neutral-700">Choose Template</p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {menuTemplates.map((template) => {
-                const isActive = template.id === selectedTemplateId
-                return (
-                  <button
-                    key={template.id}
-                    type="button"
-                    onClick={() => loadTemplate(template.id)}
-                    className={`rounded-2xl border p-4 text-left transition ${isActive
-                        ? 'border-green-500 bg-green-600 text-white'
-                        : 'border-neutral-200 bg-white text-neutral-900 hover:border-green-400'
-                      }`}
-                  >
-                    <p className="text-sm font-bold">{template.label}</p>
-                    <p className={`mt-1 text-xs leading-relaxed ${isActive ? 'text-green-100' : 'text-neutral-500'}`}>
-                      {template.description}
-                    </p>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Preview */}
-          {draftMenu && (
-            <div>
-              <p className="mb-3 text-sm font-semibold text-neutral-700">Live Preview</p>
-              <TemplateMenuPreview menu={{ ...draftMenu, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone }} currencySymbol={currencySymbol} />
+              )}
             </div>
           )}
 
-          {!draftMenu && (
-            <div className="rounded-2xl border-2 border-dashed p-10 text-center" style={{ borderColor: '#dcfce7' }}>
-              <p className="text-neutral-500">Select a template above to start building your menu.</p>
+          {activeTab === 'setup' && (
+            <div className="space-y-5">
+              {/* Restaurant Name & Menu Title */}
+              <div className="grid grid-cols-2 gap-3 bg-neutral-50/30 p-3.5 rounded-xl border border-neutral-200/60">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold text-neutral-700">Restaurant Name</span>
+                  <input
+                    value={draftMenu.restaurantName}
+                    onChange={(e) => updateDraft((d) => ({ ...d, restaurantName: e.target.value }))}
+                    className="input-field text-xs py-1.5 px-3 bg-white"
+                    placeholder="Name of restaurant"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold text-neutral-700">Menu Title</span>
+                  <input
+                    value={draftMenu.menuTitle}
+                    onChange={(e) => updateDraft((d) => ({ ...d, menuTitle: e.target.value }))}
+                    className="input-field text-xs py-1.5 px-3 bg-white"
+                    placeholder="e.g. Dinner Menu"
+                  />
+                </label>
+              </div>
+
+              {/* Notes */}
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-neutral-700">Menu Notes</span>
+                <textarea
+                  value={draftMenu.notes}
+                  onChange={(e) => updateDraft((d) => ({ ...d, notes: e.target.value }))}
+                  rows={2}
+                  className="input-field text-xs py-1.5 px-3 bg-white"
+                  placeholder="Optional timing details or highlights"
+                />
+              </label>
+
+              {/* Template Selector */}
+              <div>
+                <span className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Select Template</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {menuTemplates.map((template) => {
+                    const isActive = template.id === selectedTemplateId
+                    return (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => loadTemplate(template.id)}
+                        className={`rounded-xl border p-2.5 text-left transition duration-150 flex flex-col justify-between h-[80px] ${isActive
+                            ? 'border-green-500 bg-green-50/40 text-green-900'
+                            : 'border-neutral-200 bg-white text-neutral-800 hover:border-green-300'
+                          }`}
+                      >
+                        <p className="text-xs font-bold truncate w-full">{template.label}</p>
+                        <p className="text-[9px] text-neutral-500 leading-normal line-clamp-2 mt-1">{template.description}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Category / Section Management */}
+              <div className="space-y-3 pt-3 border-t border-neutral-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Categories / Sections</span>
+                  <button
+                    type="button"
+                    onClick={addSection}
+                    className="text-xs font-semibold text-green-700 hover:text-green-800 flex items-center gap-0.5"
+                  >
+                    <IconPlus className="w-3.5 h-3.5" /> Add Category
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {draftMenu.sections.map((section) => (
+                    <div key={section.id} className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/80 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <input
+                          value={section.title}
+                          onChange={(e) => updateSectionField(section.id, e.target.value)}
+                          className="input-field text-xs font-semibold flex-1 py-1.5 px-3 bg-white"
+                          placeholder="Category Title"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (draftMenu.sections.length <= 1) {
+                              alert('You must have at least one category.')
+                              return
+                            }
+                            if (window.confirm(`Delete "${section.title}" category? All items inside will be deleted.`)) {
+                              removeSection(section.id)
+                            }
+                          }}
+                          className="p-1.5 text-neutral-400 hover:text-red-500 transition"
+                          title="Delete Category"
+                        >
+                          <IconTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Subcategories */}
+                      <div className="pl-3 border-l-2 border-neutral-300 space-y-2">
+                        {section.subcategories?.map(sub => (
+                          <div key={sub.id} className="flex items-center gap-1.5">
+                            <input
+                              value={sub.title}
+                              onChange={(e) => updateSubcategoryTitle(section.id, sub.id, e.target.value)}
+                              className="input-field text-[11px] font-medium flex-1 py-1 px-2.5 bg-white"
+                              placeholder="Subcategory Name"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeSubcategory(section.id, sub.id)}
+                              className="text-neutral-400 hover:text-red-500 font-bold px-1"
+                              title="Delete Subcategory"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addSubcategory(section.id)}
+                          className="text-[10px] font-semibold text-neutral-500 hover:text-green-600 flex items-center gap-0.5 mt-1"
+                        >
+                          <IconPlus className="w-3 h-3" /> Add Subcategory
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview Collapsible Accordion */}
+              <div className="pt-3 border-t border-neutral-100">
+                <details className="group border border-neutral-200 rounded-xl bg-white overflow-hidden">
+                  <summary className="flex items-center justify-between p-3 text-xs font-bold text-neutral-700 bg-neutral-50 cursor-pointer select-none">
+                    <span>Live Preview Mockup</span>
+                    <span className="text-neutral-400 group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="p-3 border-t border-neutral-200 max-h-[400px] overflow-y-auto bg-neutral-100/30">
+                    <TemplateMenuPreview menu={{ ...draftMenu, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone }} currencySymbol={currencySymbol} />
+                  </div>
+                </details>
+              </div>
             </div>
           )}
         </div>
       </div>
-    </>
-  )
-}
+    )
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -1630,78 +1910,87 @@ function Editor() {
 
       {/* Main content */}
       <main className="main-content">
-        {activeSection === 'dashboard' && <DashboardScreen
-          profile={profile}
-          restaurantSettings={restaurantSettings}
-          savedMenus={savedMenus}
-          draftMenu={draftMenu}
-          draftItemCount={draftItemCount}
-          openNewMenuBuilder={openNewMenuBuilder}
-          setActiveSection={setActiveSection}
-          loadMenuForEditing={loadMenuForEditing}
-          openMenuPreview={openMenuPreview}
-          openQrPreview={openQrPreview}
-        />}
-        {activeSection === 'my-menu' && <MyMenuScreen
-          savedMenus={savedMenus}
-          openNewMenuBuilder={openNewMenuBuilder}
-          openQrPreview={openQrPreview}
-          loadMenuForEditing={loadMenuForEditing}
-          openMenuPreview={openMenuPreview}
-          deleteConfirmId={deleteConfirmId}
-          setDeleteConfirmId={setDeleteConfirmId}
-          handleDeleteMenu={handleDeleteMenu}
-          isDeletingMenu={isDeletingMenu}
-        />}
-        {activeSection === 'analytics' && <AnalyticsScreen
-          profile={profile}
-          restaurantSettings={restaurantSettings}
-          setActiveSection={setActiveSection}
-        />}
-        {activeSection === 'settings' && <SettingsScreen
-          restaurantSettings={restaurantSettings}
-          profile={profile}
-          isRestaurantLoading={isRestaurantLoading}
-          isRestaurantUpdating={isRestaurantUpdating}
-          handleToggleOnlineOrders={handleToggleOnlineOrders}
-          handleCurrencyChange={handleCurrencyChange}
-          handleRestaurantNameChange={handleRestaurantNameChange}
-          handleRestaurantAddressChange={handleRestaurantAddressChange}
-          handleRestaurantPhoneChange={handleRestaurantPhoneChange}
-          handleSlugChange={handleSlugChange}
-          savedMenus={savedMenus}
-          setDeleteConfirmId={setDeleteConfirmId}
-          handleToggleServiceFee={handleToggleServiceFee}
-          handleServiceFeePercentageChange={handleServiceFeePercentageChange}
-          tableTrackingEnabled={tableTrackingEnabled}
-          tableCount={tableCount}
-          handleToggleTableTracking={
-          handleToggleTableTracking
-          }
-          handleTableCountChange={
-          handleTableCountChange
-          }
-          handleUpdateBackupDatabase={handleUpdateBackupDatabase}
-          waiterCodes={waiterCodes}
-          isWaiterCodesLoading={isWaiterCodesLoading}
-          isWaiterCodesUpdating={isWaiterCodesUpdating}
-          onAddWaiterCode={handleAddWaiterCode}
-          onDeleteWaiterCode={handleDeleteWaiterCode}
-        />}
-        {activeSection === 'profile' && <ProfileScreen
-          user={user}
-          profile={profile}
-          restaurantSettings={restaurantSettings}
-          restaurantId={restaurantId}
-          initials={initials}
-          logoutUser={logoutUser}
-          isUpdating={isRestaurantUpdating}
-          handleDisplayNameChange={handleDisplayNameChange}
-        />}
+        {/* When builder is open, it takes over the full main area */}
+        {showBuilder ? (
+          <div className="h-screen flex flex-col">
+            <BuilderInlinePanel />
+          </div>
+        ) : (
+          <>
+            {activeSection === 'dashboard' && <DashboardScreen
+              profile={profile}
+              restaurantSettings={restaurantSettings}
+              savedMenus={savedMenus}
+              draftMenu={draftMenu}
+              draftItemCount={draftItemCount}
+              openNewMenuBuilder={openNewMenuBuilder}
+              setActiveSection={setActiveSection}
+              loadMenuForEditing={loadMenuForEditing}
+              openMenuPreview={openMenuPreview}
+              openQrPreview={openQrPreview}
+            />}
+            {activeSection === 'my-menu' && <MyMenuScreen
+              savedMenus={savedMenus}
+              openNewMenuBuilder={openNewMenuBuilder}
+              openQrPreview={openQrPreview}
+              loadMenuForEditing={loadMenuForEditing}
+              openMenuPreview={openMenuPreview}
+              deleteConfirmId={deleteConfirmId}
+              setDeleteConfirmId={setDeleteConfirmId}
+              handleDeleteMenu={handleDeleteMenu}
+              isDeletingMenu={isDeletingMenu}
+            />}
+            {activeSection === 'analytics' && <AnalyticsScreen
+              profile={profile}
+              restaurantSettings={restaurantSettings}
+              setActiveSection={setActiveSection}
+            />}
+            {activeSection === 'settings' && <SettingsScreen
+              restaurantSettings={restaurantSettings}
+              profile={profile}
+              isRestaurantLoading={isRestaurantLoading}
+              isRestaurantUpdating={isRestaurantUpdating}
+              handleToggleOnlineOrders={handleToggleOnlineOrders}
+              handleCurrencyChange={handleCurrencyChange}
+              handleRestaurantNameChange={handleRestaurantNameChange}
+              handleRestaurantAddressChange={handleRestaurantAddressChange}
+              handleRestaurantPhoneChange={handleRestaurantPhoneChange}
+              handleSlugChange={handleSlugChange}
+              savedMenus={savedMenus}
+              setDeleteConfirmId={setDeleteConfirmId}
+              handleToggleServiceFee={handleToggleServiceFee}
+              handleServiceFeePercentageChange={handleServiceFeePercentageChange}
+              tableTrackingEnabled={tableTrackingEnabled}
+              tableCount={tableCount}
+              handleToggleTableTracking={
+              handleToggleTableTracking
+              }
+              handleTableCountChange={
+              handleTableCountChange
+              }
+              handleUpdateBackupDatabase={handleUpdateBackupDatabase}
+              waiterCodes={waiterCodes}
+              isWaiterCodesLoading={isWaiterCodesLoading}
+              isWaiterCodesUpdating={isWaiterCodesUpdating}
+              onAddWaiterCode={handleAddWaiterCode}
+              onDeleteWaiterCode={handleDeleteWaiterCode}
+            />}
+            {activeSection === 'profile' && <ProfileScreen
+              user={user}
+              profile={profile}
+              restaurantSettings={restaurantSettings}
+              restaurantId={restaurantId}
+              initials={initials}
+              logoutUser={logoutUser}
+              isUpdating={isRestaurantUpdating}
+              handleDisplayNameChange={handleDisplayNameChange}
+            />}
+          </>
+        )}
       </main>
 
       {/* Menu Builder Drawer */}
-      {showBuilder && BuilderDrawer()}
+      {/* Removed BuilderDrawer since we now use BuilderInlinePanel on the dashboard page */}
 
       {/* QR Preview Modal */}
       {qrPreview && (
