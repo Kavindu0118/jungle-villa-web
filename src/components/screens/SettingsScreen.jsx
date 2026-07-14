@@ -34,6 +34,7 @@ export default function SettingsScreen({
   const [editingSlug, setEditingSlug] = useState(false)
   const [editingAddress, setEditingAddress] = useState(false)
   const [editingPhone, setEditingPhone] = useState(false)
+  const [slugError, setSlugError] = useState('')
   
   const [tempName, setTempName] = useState(restaurantSettings?.name || '')
   const [tempSlug, setTempSlug] = useState(restaurantSettings?.slug || '')
@@ -64,9 +65,15 @@ export default function SettingsScreen({
   }
 
   const handleSaveSlug = async () => {
-    if (tempSlug.trim()) {
-      await handleSlugChange(tempSlug.trim())
+    const trimmedSlug = tempSlug.trim()
+    if (!trimmedSlug) return
+
+    setSlugError('')
+    try {
+      await handleSlugChange(trimmedSlug)
       setEditingSlug(false)
+    } catch (err) {
+      setSlugError(err.message || 'This slug already exists. Please choose another one.')
     }
   }
 
@@ -88,6 +95,7 @@ export default function SettingsScreen({
   const handleCancelSlug = () => {
     setTempSlug(restaurantSettings?.slug || '')
     setEditingSlug(false)
+    setSlugError('')
   }
 
   const handleCancelAddress = () => {
@@ -363,33 +371,40 @@ export default function SettingsScreen({
           <div className="flex justify-between items-center py-2 border-b border-neutral-100">
             <span className="text-sm font-medium text-neutral-600">Menu Slug</span>
             {editingSlug ? (
-              <div className="flex items-center gap-2">
-                <input
-                  value={tempSlug}
-                  onChange={(e) => setTempSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                  disabled={isRestaurantUpdating}
-                  className="font-mono rounded-lg border border-neutral-300 px-2 py-1 text-sm outline-none transition focus:border-green-500"
-                  placeholder="e.g. my-restaurant"
-                />
-                <button
-                  onClick={handleSaveSlug}
-                  disabled={isRestaurantUpdating || !tempSlug.trim()}
-                  className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={handleCancelSlug}
-                  disabled={isRestaurantUpdating}
-                  className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
-                >
-                  Cancel
-                </button>
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={tempSlug}
+                    onChange={(e) => {
+                      setTempSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+                      if (slugError) setSlugError('')
+                    }}
+                    disabled={isRestaurantUpdating}
+                    className="font-mono rounded-lg border border-neutral-300 px-2 py-1 text-sm outline-none transition focus:border-green-500"
+                    placeholder="e.g. my-restaurant"
+                  />
+                  <button
+                    onClick={handleSaveSlug}
+                    disabled={isRestaurantUpdating || !tempSlug.trim()}
+                    className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelSlug}
+                    disabled={isRestaurantUpdating}
+                    className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {slugError && <p className="text-xs text-red-600">{slugError}</p>}
               </div>
             ) : (
               <button
                 onClick={() => {
                   setTempSlug(restaurantSettings?.slug || '')
+                  setSlugError('')
                   setEditingSlug(true)
                 }}
                 disabled={isRestaurantLoading || isRestaurantUpdating}

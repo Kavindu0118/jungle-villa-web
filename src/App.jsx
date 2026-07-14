@@ -20,6 +20,7 @@ import {
   getRestaurantMenu,
   getRestaurantSettings,
   saveRestaurantSettings,
+  isRestaurantSlugAvailable,
   saveUserProfile,
   createRestaurantOrder,
   subscribeToRestaurantOrder,
@@ -842,9 +843,20 @@ function Editor() {
 
   const handleSlugChange = async (newSlug) => {
     if (!restaurantId || !restaurantSettings) return
-    setRestaurantSettings((c) => ({ ...c, slug: newSlug }))
+
+    const normalizedSlug = (newSlug || '').trim().toLowerCase()
+    if (!normalizedSlug) {
+      throw new Error('Slug cannot be empty.')
+    }
+
+    const isAvailable = await isRestaurantSlugAvailable(restaurantId, normalizedSlug)
+    if (!isAvailable) {
+      throw new Error('This slug already exists. Please choose another one.')
+    }
+
+    setRestaurantSettings((c) => ({ ...c, slug: normalizedSlug }))
     setIsRestaurantUpdating(true)
-    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, slug: newSlug })
+    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, slug: normalizedSlug })
     setIsRestaurantUpdating(false)
   }
 
