@@ -1236,6 +1236,14 @@ function Editor() {
     const [editingItem, setEditingItem] = useState(null)
     const [isAddingNew, setIsAddingNew] = useState(false)
     const [uploadingItemImage, setUploadingItemImage] = useState({})
+    const [expandedSubcategories, setExpandedSubcategories] = useState({})
+
+    const toggleSubcategory = (subcategoryId) => {
+      setExpandedSubcategories((prev) => ({
+        ...prev,
+        [subcategoryId]: !prev[subcategoryId]
+      }))
+    }
 
     const handleSaveItem = (e) => {
       e.preventDefault()
@@ -1307,26 +1315,12 @@ function Editor() {
     const renderListItemRow = (item, sectionId, subcategoryId) => {
       return (
         <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 hover:border-green-300 bg-white hover:bg-neutral-50/50 shadow-sm transition duration-150 mb-2 group">
-          {/* Item image */}
-          <div className="h-11 w-11 flex-shrink-0 rounded-lg overflow-hidden border border-neutral-200 bg-neutral-50 flex items-center justify-center">
-            {item.imageUrl ? (
-              <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-lg">🍔</span>
-            )}
-          </div>
-
           {/* Details */}
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline justify-between gap-2">
               <h4 className="font-semibold text-neutral-800 text-sm truncate">{item.name || 'Untitled Item'}</h4>
               <span className="text-sm font-bold text-neutral-900">{currencySymbol}{item.price || '0.00'}</span>
             </div>
-            {item.description ? (
-              <p className="text-xs text-neutral-500 truncate mt-0.5">{item.description}</p>
-            ) : (
-              <p className="text-xs text-neutral-400 italic mt-0.5">No description</p>
-            )}
           </div>
 
           {/* Actions */}
@@ -1403,16 +1397,16 @@ function Editor() {
           <button
             type="button"
             onClick={() => { setActiveTab('items'); setEditingItem(null); setIsAddingNew(false) }}
-            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'items' ? 'bg-white shadow-xs text-green-700' : 'text-neutral-500 hover:text-neutral-800'}`}
+            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'items' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
           >
-            📋 Menu Items
+            Menu Items
           </button>
           <button
             type="button"
             onClick={() => { setActiveTab('setup'); setEditingItem(null); setIsAddingNew(false) }}
-            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'setup' ? 'bg-white shadow-xs text-green-700' : 'text-neutral-500 hover:text-neutral-800'}`}
+            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'setup' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
           >
-            ⚙️ Menu Setup
+            Menu Setup
           </button>
         </div>
 
@@ -1682,17 +1676,35 @@ function Editor() {
                             {directItems.map(item => renderListItemRow(item, section.id, null))}
 
                             {/* Subcategories */}
-                            {subcategories.map(sub => (
-                              <div key={sub.id} className="mt-3 pl-2.5 border-l-2 border-green-200 space-y-1.5">
-                                <div className="flex items-center gap-1.5 mb-1.5">
-                                  <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{sub.title}</span>
+                            {subcategories.map(sub => {
+                              const isExpanded = expandedSubcategories[sub.id]
+                              const itemCount = sub.items?.length || 0
+
+                              return (
+                                <div key={sub.id} className="mt-3 rounded-xl border border-neutral-200/80 bg-white">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleSubcategory(sub.id)}
+                                    className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-xs font-bold text-neutral-700 uppercase tracking-widest bg-neutral-50 hover:bg-neutral-100 rounded-t-xl"
+                                  >
+                                    <span>{sub.title}</span>
+                                    <span className="flex items-center gap-2 text-neutral-500">
+                                      <span className="text-[10px] font-medium">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+                                      <span className="text-sm">{isExpanded ? '▾' : '▸'}</span>
+                                    </span>
+                                  </button>
+                                  {isExpanded && (
+                                    <div className="space-y-2 px-3 py-2 border-t border-neutral-200/80">
+                                      {sub.items && sub.items.length > 0 ? (
+                                        sub.items.map(item => renderListItemRow(item, section.id, sub.id))
+                                      ) : (
+                                        <p className="text-[10px] text-neutral-400 italic">No items here.</p>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                                {sub.items && sub.items.map(item => renderListItemRow(item, section.id, sub.id))}
-                                {(!sub.items || sub.items.length === 0) && (
-                                  <p className="text-[10px] text-neutral-400 italic">No items here.</p>
-                                )}
-                              </div>
-                            ))}
+                              )
+                            })}
 
                             {!hasItems && (
                               <p className="text-[11px] text-neutral-400 italic text-center py-2">No items in this category yet.</p>
