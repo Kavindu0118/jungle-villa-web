@@ -53,6 +53,24 @@ const findRestaurantBySlug = async (slug) => {
   return snapshot.docs[0]
 }
 
+export const isRestaurantSlugAvailable = async (restaurantId, slug) => {
+  if (!isFirebaseConfigured || !db || !restaurantId || !slug) return false
+
+  const normalizedSlug = slugify(slug)
+  if (!normalizedSlug) return false
+
+  const restaurantQuery = query(
+    collection(db, RESTAURANTS_COLLECTION),
+    where('slug', '==', normalizedSlug),
+    limit(2),
+  )
+
+  const snapshot = await getDocs(restaurantQuery)
+  if (snapshot.empty) return true
+
+  return snapshot.docs.every((docSnap) => docSnap.id === restaurantId)
+}
+
 const ensureUniqueRestaurantSlug = async (restaurantName) => {
   const baseSlug = slugify(restaurantName) || `restaurant-${Math.floor(Math.random() * 100000)}`
   let nextSlug = baseSlug
