@@ -222,10 +222,17 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
       <div className="rounded-2xl border border-neutral-300 bg-neutral-100/70 p-5 sm:p-7">
         <div className="border-b border-neutral-300 pb-4 mb-5">
           <h4 className="text-2xl font-semibold text-neutral-900">{menu.restaurantName || 'Untitled Restaurant'}</h4>
-          {(menu.restaurantAddress || menu.restaurantPhone) && (
+          {(menu.restaurantAddress || menu.restaurantPhone || menu.restaurantWebsite) && (
             <div className="mt-2 text-sm text-neutral-600 space-y-0.5">
               {menu.restaurantAddress && <p>{menu.restaurantAddress}</p>}
               {menu.restaurantPhone && <p>{menu.restaurantPhone}</p>}
+              {menu.restaurantWebsite && (
+                <p>
+                  <a href={menu.restaurantWebsite.startsWith('http') ? menu.restaurantWebsite : `https://${menu.restaurantWebsite}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700 hover:underline transition">
+                    {menu.restaurantWebsite}
+                  </a>
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -320,10 +327,17 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
         {/* Dark gradient header */}
         <div className="px-6 pt-6 pb-5 flex flex-col items-center text-center">
           <h4 className="text-2xl font-bold text-white leading-tight">{menu.restaurantName || 'Untitled Restaurant'}</h4>
-          {(menu.restaurantAddress || menu.restaurantPhone) && (
+          {(menu.restaurantAddress || menu.restaurantPhone || menu.restaurantWebsite) && (
             <div className="mt-2 text-sm text-neutral-400 space-y-0.5">
               {menu.restaurantAddress && <p>{menu.restaurantAddress}</p>}
               {menu.restaurantPhone && <p>{menu.restaurantPhone}</p>}
+              {menu.restaurantWebsite && (
+                <p>
+                  <a href={menu.restaurantWebsite.startsWith('http') ? menu.restaurantWebsite : `https://${menu.restaurantWebsite}`} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300 hover:underline transition">
+                    {menu.restaurantWebsite}
+                  </a>
+                </p>
+              )}
             </div>
           )}
 
@@ -441,10 +455,17 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
     <div className="rounded-2xl border border-neutral-300 bg-white p-5 sm:p-7">
       <div className="border-b border-dashed border-neutral-300 pb-4 text-center mb-5">
         <h4 className="text-2xl font-semibold text-neutral-900">{menu.restaurantName || 'Untitled Restaurant'}</h4>
-        {(menu.restaurantAddress || menu.restaurantPhone) && (
+        {(menu.restaurantAddress || menu.restaurantPhone || menu.restaurantWebsite) && (
           <div className="mt-2 text-sm text-neutral-500 space-y-0.5 flex flex-col items-center">
             {menu.restaurantAddress && <p>{menu.restaurantAddress}</p>}
             {menu.restaurantPhone && <p>{menu.restaurantPhone}</p>}
+            {menu.restaurantWebsite && (
+              <p>
+                <a href={menu.restaurantWebsite.startsWith('http') ? menu.restaurantWebsite : `https://${menu.restaurantWebsite}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700 hover:underline transition">
+                  {menu.restaurantWebsite}
+                </a>
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -708,6 +729,7 @@ function Editor() {
         const defaults = { 
           name: '', 
           slug: '', 
+          website: '',
           isActive: true,
           allowOnlineOrders: false,
           serviceFeeEnabled:false,
@@ -873,6 +895,14 @@ function Editor() {
     setRestaurantSettings((c) => ({ ...c, phone: newPhone }))
     setIsRestaurantUpdating(true)
     await saveRestaurantSettings(restaurantId, { ...restaurantSettings, phone: newPhone })
+    setIsRestaurantUpdating(false)
+  }
+
+  const handleRestaurantWebsiteChange = async (newWebsite) => {
+    if (!restaurantId || !restaurantSettings) return
+    setRestaurantSettings((c) => ({ ...c, website: newWebsite }))
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, website: newWebsite })
     setIsRestaurantUpdating(false)
   }
 
@@ -1861,7 +1891,7 @@ function Editor() {
                     <span className="text-neutral-400 group-open:rotate-180 transition-transform">▼</span>
                   </summary>
                   <div className="p-3 border-t border-neutral-200 max-h-[400px] overflow-y-auto bg-neutral-100/30">
-                    <TemplateMenuPreview menu={{ ...draftMenu, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone }} currencySymbol={currencySymbol} />
+                    <TemplateMenuPreview menu={{ ...draftMenu, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone, restaurantWebsite: restaurantSettings?.website }} currencySymbol={currencySymbol} />
                   </div>
                 </details>
               </div>
@@ -1979,6 +2009,7 @@ function Editor() {
               handleRestaurantNameChange={handleRestaurantNameChange}
               handleRestaurantAddressChange={handleRestaurantAddressChange}
               handleRestaurantPhoneChange={handleRestaurantPhoneChange}
+              handleRestaurantWebsiteChange={handleRestaurantWebsiteChange}
               handleSlugChange={handleSlugChange}
               savedMenus={savedMenus}
               setDeleteConfirmId={setDeleteConfirmId}
@@ -2514,7 +2545,7 @@ function MenuViewer() {
 
   const menuPreviewEl = (
     <TemplateMenuPreview
-      menu={{ ...menuData, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone }}
+      menu={{ ...menuData, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone, restaurantWebsite: restaurantSettings?.website }}
       currencySymbol={currencySymbol}
       orderingEnabled={allowOnlineOrders && !hasActiveOrder}
       onAddToCart={addToCart}

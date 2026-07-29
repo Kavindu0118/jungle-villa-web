@@ -17,6 +17,7 @@ export default function SettingsScreen({
   handleSlugChange,
   handleRestaurantAddressChange,
   handleRestaurantPhoneChange,
+  handleRestaurantWebsiteChange,
   savedMenus,
   setDeleteConfirmId,
   tableTrackingEnabled,
@@ -35,11 +36,14 @@ export default function SettingsScreen({
   const [editingAddress, setEditingAddress] = useState(false)
   const [editingPhone, setEditingPhone] = useState(false)
   const [slugError, setSlugError] = useState('')
-  
+  const [editingWebsite, setEditingWebsite] = useState(false)
+
+
   const [tempName, setTempName] = useState(restaurantSettings?.name || '')
   const [tempSlug, setTempSlug] = useState(restaurantSettings?.slug || '')
   const [tempAddress, setTempAddress] = useState(restaurantSettings?.address || '')
   const [tempPhone, setTempPhone] = useState(restaurantSettings?.phone || '')
+  const [tempWebsite, setTempWebsite] = useState(restaurantSettings?.website || '')
 
   const [newCode, setNewCode] = useState('')
 
@@ -85,6 +89,21 @@ export default function SettingsScreen({
   const handleSavePhone = async () => {
     await handleRestaurantPhoneChange(tempPhone.trim())
     setEditingPhone(false)
+  }
+
+  const handleSaveWebsite = async () => {
+    await handleRestaurantWebsiteChange(tempWebsite.trim())
+    setEditingWebsite(false)
+  }
+
+  const handleCancelPhone = () => {
+    setTempPhone(restaurantSettings?.phone || '')
+    setEditingPhone(false)
+  }
+
+  const handleCancelWebsite = () => {
+    setTempWebsite(restaurantSettings?.website || '')
+    setEditingWebsite(false)
   }
 
   const handleCancelName = () => {
@@ -149,9 +168,9 @@ export default function SettingsScreen({
       const tempDb = getFirestore(tempApp)
       const testRef = collection(tempDb, 'orders')
       const testQuery = query(testRef, limit(1))
-      
+
       await getDocs(testQuery)
-      
+
       setTestStatus({ type: 'success', message: 'Connection successful! Orders collection is accessible.' })
     } catch (err) {
       console.error('Test connection error:', err)
@@ -260,7 +279,7 @@ export default function SettingsScreen({
                 value={
                   restaurantSettings?.serviceFeePercentage || 10
                 }
-                onChange={(e)=>
+                onChange={(e) =>
                   handleServiceFeePercentageChange(
                     Number(e.target.value)
                   )
@@ -287,18 +306,16 @@ export default function SettingsScreen({
           <button
             type="button"
             onClick={handleToggleTableTracking}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full ${
-              tableTrackingEnabled
+            className={`relative inline-flex h-6 w-11 items-center rounded-full ${tableTrackingEnabled
                 ? "bg-green-600"
                 : "bg-neutral-300"
-            }`}
+              }`}
           >
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                tableTrackingEnabled
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${tableTrackingEnabled
                   ? "translate-x-6"
                   : "translate-x-1"
-              }`}
+                }`}
             />
           </button>
         </div>
@@ -497,6 +514,47 @@ export default function SettingsScreen({
             )}
           </div>
 
+          {/* Restaurant Website */}
+          <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+            <span className="text-sm font-medium text-neutral-600">Website</span>
+            {editingWebsite ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={tempWebsite}
+                  onChange={(e) => setTempWebsite(e.target.value)}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 px-2 py-1 text-sm outline-none transition focus:border-green-500"
+                  placeholder="Enter website URL"
+                />
+                <button
+                  onClick={handleSaveWebsite}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg bg-green-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-green-700 disabled:opacity-60"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelWebsite}
+                  disabled={isRestaurantUpdating}
+                  className="rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setTempWebsite(restaurantSettings?.website || '')
+                  setEditingWebsite(true)
+                }}
+                disabled={isRestaurantLoading || isRestaurantUpdating}
+                className="text-sm font-medium text-neutral-900 hover:text-green-600 transition disabled:opacity-60 text-right max-w-[200px] truncate"
+              >
+                {restaurantSettings?.website || '—'}
+              </button>
+            )}
+          </div>
+
           {/* Status */}
           <div className="flex justify-between items-center py-2">
             <span className="text-sm font-medium text-neutral-600">Status</span>
@@ -528,14 +586,14 @@ export default function SettingsScreen({
       {/* App Preferences */}
       <div className="card p-5 mb-4">
         <p className="text-xs font-semibold uppercase tracking-widest mb-4 text-neutral-400">App Preferences</p>
-        
+
         <div className="flex items-center justify-between gap-4 border-b border-neutral-100 pb-4 mb-4">
           <div>
             <p className="font-semibold text-neutral-900">Currency</p>
             <p className="mt-1 text-sm text-neutral-500">Select the currency symbol for your menu prices.</p>
           </div>
-          <select 
-            value={restaurantSettings?.currency || 'USD'} 
+          <select
+            value={restaurantSettings?.currency || 'USD'}
             onChange={(e) => handleCurrencyChange(e.target.value)}
             disabled={isRestaurantLoading || isRestaurantUpdating || !restaurantSettings}
             className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm font-semibold text-neutral-700 outline-none transition focus:border-green-500"
@@ -550,7 +608,7 @@ export default function SettingsScreen({
             <p className="font-semibold text-neutral-900">Dark Mode</p>
             <p className="mt-1 text-sm text-neutral-500">Coming soon</p>
           </div>
-          <Toggle on={false} onToggle={() => {}} disabled={true} />
+          <Toggle on={false} onToggle={() => { }} disabled={true} />
         </div>
       </div>
 
@@ -589,11 +647,10 @@ export default function SettingsScreen({
               </div>
 
               {testStatus && (
-                <div className={`p-3 rounded-xl text-sm ${
-                  testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
-                  testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-                  'bg-red-50 text-red-800 border border-red-200'
-                }`}>
+                <div className={`p-3 rounded-xl text-sm ${testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
+                    testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+                      'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
                   {testStatus.message}
                 </div>
               )}
@@ -686,11 +743,10 @@ export default function SettingsScreen({
               </div>
 
               {testStatus && (
-                <div className={`p-3 rounded-xl text-sm ${
-                  testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
-                  testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-                  'bg-red-50 text-red-800 border border-red-200'
-                }`}>
+                <div className={`p-3 rounded-xl text-sm ${testStatus.type === 'loading' ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse' :
+                    testStatus.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+                      'bg-red-50 text-red-800 border border-red-200'
+                  }`}>
                   {testStatus.message}
                 </div>
               )}
@@ -749,11 +805,10 @@ export default function SettingsScreen({
               <div key={code} className="flex items-center justify-between p-3 rounded-xl border border-neutral-100 bg-neutral-50/50">
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-sm font-semibold text-neutral-800">{code}</span>
-                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                    used 
-                      ? 'bg-red-50 text-red-700 border border-red-100' 
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${used
+                      ? 'bg-red-50 text-red-700 border border-red-100'
                       : 'bg-green-50 text-green-700 border border-green-100'
-                  }`}>
+                    }`}>
                     {used ? 'Used' : 'Not Used'}
                   </span>
                 </div>
