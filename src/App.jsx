@@ -19,6 +19,7 @@ import {
   getMenuRecord,
   getRestaurantMenu,
   getRestaurantSettings,
+  subscribeToRestaurantSettings,
   saveRestaurantSettings,
   isRestaurantSlugAvailable,
   saveUserProfile,
@@ -94,11 +95,10 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
           <button
             type="button"
             onClick={() => handleSectionSelect('all')}
-            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
-              activeSectionId === 'all'
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeSectionId === 'all'
                 ? 'bg-neutral-900 text-white shadow-sm scale-[1.02]'
                 : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
-            }`}
+              }`}
           >
             All Categories
           </button>
@@ -107,11 +107,10 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
               key={section.id}
               type="button"
               onClick={() => handleSectionSelect(section.id)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
-                activeSectionId === section.id
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeSectionId === section.id
                   ? 'bg-green-600 text-white shadow-sm scale-[1.02]'
                   : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
-              }`}
+                }`}
             >
               {section.title || 'Untitled Section'}
             </button>
@@ -124,11 +123,10 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
             <button
               type="button"
               onClick={() => setActiveSubcategoryId('all')}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                activeSubcategoryId === 'all'
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${activeSubcategoryId === 'all'
                   ? 'bg-neutral-800 text-white shadow-sm'
                   : 'bg-neutral-50 text-neutral-500 border border-neutral-200/40 hover:bg-neutral-100'
-              }`}
+                }`}
             >
               All {selectedSection.title}
             </button>
@@ -137,11 +135,10 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
                 key={sub.id}
                 type="button"
                 onClick={() => setActiveSubcategoryId(sub.id)}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                  activeSubcategoryId === sub.id
+                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${activeSubcategoryId === sub.id
                     ? 'bg-green-100 text-green-800 border border-green-200 font-semibold'
                     : 'bg-neutral-50 text-neutral-500 border border-neutral-200/40 hover:bg-neutral-100'
-                }`}
+                  }`}
               >
                 {sub.title || 'Untitled Sub'}
               </button>
@@ -498,650 +495,651 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
 // Toggle moved to components/Toggle.jsx
 
 // ─── Editor (Main Dashboard) ──────────────────────────────────────────────────
-  // ── Menu Builder Inline Panel ───────────────────────────────────────────────────
+// ── Menu Builder Inline Panel ───────────────────────────────────────────────────
 function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, saveStatus, updateDraft, menuTemplates, selectedTemplateId, loadTemplate, addSection, updateSectionField, removeSection, removeSubcategory, addSubcategory, updateSubcategoryTitle, restaurantSettings, currencySymbol, restaurantId, updateSectionList, isSupabaseConfigured, uploadMenuItemImage }) {
-    const [activeTab, setActiveTab] = useState('items') // 'items' | 'setup'
-    const [editingItem, setEditingItem] = useState(null)
-    const [isAddingNew, setIsAddingNew] = useState(false)
-    const [uploadingItemImage, setUploadingItemImage] = useState({})
-    const [expandedSubcategories, setExpandedSubcategories] = useState({})
+  const [activeTab, setActiveTab] = useState('items') // 'items' | 'setup'
+  const [editingItem, setEditingItem] = useState(null)
+  const [isAddingNew, setIsAddingNew] = useState(false)
+  const [uploadingItemImage, setUploadingItemImage] = useState({})
+  const [expandedSubcategories, setExpandedSubcategories] = useState({})
 
-    const toggleSubcategory = (subcategoryId) => {
-      setExpandedSubcategories((prev) => ({
-        ...prev,
-        [subcategoryId]: !prev[subcategoryId]
-      }))
+  const toggleSubcategory = (subcategoryId) => {
+    setExpandedSubcategories((prev) => ({
+      ...prev,
+      [subcategoryId]: !prev[subcategoryId]
+    }))
+  }
+
+  const handleSaveItem = (e) => {
+    e.preventDefault()
+    if (!editingItem) return
+    if (!editingItem.name.trim()) {
+      alert('Please enter an item name.')
+      return
+    }
+    if (!editingItem.sectionId) {
+      alert('Please select a category/section.')
+      return
     }
 
-    const handleSaveItem = (e) => {
-      e.preventDefault()
-      if (!editingItem) return
-      if (!editingItem.name.trim()) {
-        alert('Please enter an item name.')
-        return
-      }
-      if (!editingItem.sectionId) {
-        alert('Please select a category/section.')
-        return
-      }
+    const { id, name, description, price, imageUrl, sectionId, subcategoryId } = editingItem
 
-      const { id, name, description, price, imageUrl, sectionId, subcategoryId } = editingItem
+    updateSectionList((sections) => {
+      // 1. Remove the item from its current location
+      let cleanedSections = sections.map((s) => {
+        const nextItems = s.items ? s.items.filter((it) => it.id !== id) : []
+        const nextSubs = s.subcategories ? s.subcategories.map((sub) => ({
+          ...sub,
+          items: sub.items ? sub.items.filter((it) => it.id !== id) : []
+        })) : []
+        return { ...s, items: nextItems, subcategories: nextSubs }
+      })
 
-      updateSectionList((sections) => {
-        // 1. Remove the item from its current location
-        let cleanedSections = sections.map((s) => {
-          const nextItems = s.items ? s.items.filter((it) => it.id !== id) : []
-          const nextSubs = s.subcategories ? s.subcategories.map((sub) => ({
-            ...sub,
-            items: sub.items ? sub.items.filter((it) => it.id !== id) : []
-          })) : []
-          return { ...s, items: nextItems, subcategories: nextSubs }
-        })
+      // 2. Add the item to the new target section / subcategory
+      return cleanedSections.map((s) => {
+        if (s.id !== sectionId) return s
 
-        // 2. Add the item to the new target section / subcategory
-        return cleanedSections.map((s) => {
-          if (s.id !== sectionId) return s
-          
-          if (subcategoryId) {
-            return {
-              ...s,
-              subcategories: (s.subcategories || []).map((sub) => {
-                if (sub.id !== subcategoryId) return sub
-                return {
-                  ...sub,
-                  items: [...(sub.items || []), { id, name, description, price, imageUrl }]
-                }
-              })
-            }
-          } else {
-            return {
-              ...s,
-              items: [...(s.items || []), { id, name, description, price, imageUrl }]
-            }
+        if (subcategoryId) {
+          return {
+            ...s,
+            subcategories: (s.subcategories || []).map((sub) => {
+              if (sub.id !== subcategoryId) return sub
+              return {
+                ...sub,
+                items: [...(sub.items || []), { id, name, description, price, imageUrl }]
+              }
+            })
           }
-        })
+        } else {
+          return {
+            ...s,
+            items: [...(s.items || []), { id, name, description, price, imageUrl }]
+          }
+        }
       })
+    })
 
-      setEditingItem(null)
-      setIsAddingNew(false)
-    }
+    setEditingItem(null)
+    setIsAddingNew(false)
+  }
 
-    const handleDeleteItem = (itemId) => {
-      if (!window.confirm('Are you sure you want to delete this item?')) return
-      updateSectionList((sections) => {
-        return sections.map((s) => {
-          const nextItems = s.items ? s.items.filter((it) => it.id !== itemId) : []
-          const nextSubs = s.subcategories ? s.subcategories.map((sub) => ({
-            ...sub,
-            items: sub.items ? sub.items.filter((it) => it.id !== itemId) : []
-          })) : []
-          return { ...s, items: nextItems, subcategories: nextSubs }
-        })
+  const handleDeleteItem = (itemId) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) return
+    updateSectionList((sections) => {
+      return sections.map((s) => {
+        const nextItems = s.items ? s.items.filter((it) => it.id !== itemId) : []
+        const nextSubs = s.subcategories ? s.subcategories.map((sub) => ({
+          ...sub,
+          items: sub.items ? sub.items.filter((it) => it.id !== itemId) : []
+        })) : []
+        return { ...s, items: nextItems, subcategories: nextSubs }
       })
-    }
+    })
+  }
 
-    const renderListItemRow = (item, sectionId, subcategoryId) => {
-      return (
-        <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 hover:border-green-300 bg-white hover:bg-neutral-50/50 shadow-sm transition duration-150 mb-2 group">
-          {/* Details */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-baseline justify-between gap-2">
-              <h4 className="font-semibold text-neutral-800 text-sm truncate">{item.name || 'Untitled Item'}</h4>
-              <span className="text-sm font-bold text-neutral-900">{currencySymbol}{item.price || '0.00'}</span>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition duration-150 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setEditingItem({
-                  id: item.id,
-                  name: item.name,
-                  description: item.description,
-                  price: item.price,
-                  imageUrl: item.imageUrl,
-                  sectionId: sectionId,
-                  subcategoryId: subcategoryId || ''
-                })
-                setIsAddingNew(false)
-              }}
-              className="p-1 rounded-lg text-neutral-500 hover:text-green-600 hover:bg-green-50 transition"
-              title="Edit Item"
-            >
-              <IconEdit className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDeleteItem(item.id)}
-              className="p-1 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition"
-              title="Delete Item"
-            >
-              <IconTrash className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )
-    }
-
+  const renderListItemRow = (item, sectionId, subcategoryId) => {
     return (
-      <div className="flex flex-col h-full bg-white">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-neutral-100 px-5 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Menu Workspace</p>
-            <h2 className="mt-0.5 text-base font-bold text-neutral-900 truncate max-w-[180px]">
-              {draftMenu?.menuTitle || 'Untitled Menu'}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={saveMenu}
-              disabled={!draftMenu || isSaving}
-              className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1.5"
-            >
-              {isSaving ? 'Saving…' : 'Save'}
-            </button>
-            <button 
-              onClick={() => setShowBuilder(false)} 
-              className="btn-ghost p-1.5 rounded-lg border-neutral-200"
-              title="Close Builder"
-            >
-              <IconX className="w-4 h-4" />
-            </button>
+      <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 hover:border-green-300 bg-white hover:bg-neutral-50/50 shadow-sm transition duration-150 mb-2 group">
+        {/* Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-2">
+            <h4 className="font-semibold text-neutral-800 text-sm truncate">{item.name || 'Untitled Item'}</h4>
+            <span className="text-sm font-bold text-neutral-900">{currencySymbol}{item.price || '0.00'}</span>
           </div>
         </div>
 
-        {/* Status bar */}
-        {saveStatus && (
-          <div className="px-5 py-2 text-xs border-b font-medium text-green-700 bg-green-50/50 border-neutral-100 flex items-center justify-between">
-            <span className="truncate">{saveStatus}</span>
-          </div>
-        )}
-
-        {/* Tab Buttons */}
-        <div className="flex border-b border-neutral-100 bg-neutral-50/50 p-1 gap-1">
+        {/* Actions */}
+        <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition duration-150 flex-shrink-0">
           <button
             type="button"
-            onClick={() => { setActiveTab('items'); setEditingItem(null); setIsAddingNew(false) }}
-            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'items' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+            onClick={() => {
+              setEditingItem({
+                id: item.id,
+                name: item.name,
+                description: item.description,
+                price: item.price,
+                imageUrl: item.imageUrl,
+                sectionId: sectionId,
+                subcategoryId: subcategoryId || ''
+              })
+              setIsAddingNew(false)
+            }}
+            className="p-1 rounded-lg text-neutral-500 hover:text-green-600 hover:bg-green-50 transition"
+            title="Edit Item"
           >
-            Menu Items
+            <IconEdit className="w-4 h-4" />
           </button>
           <button
             type="button"
-            onClick={() => { setActiveTab('setup'); setEditingItem(null); setIsAddingNew(false) }}
-            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'setup' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+            onClick={() => handleDeleteItem(item.id)}
+            className="p-1 rounded-lg text-neutral-500 hover:text-red-600 hover:bg-red-50 transition"
+            title="Delete Item"
           >
-            Menu Setup
+            <IconTrash className="w-4 h-4" />
           </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-5">
-          {activeTab === 'items' && (
-            <div className="space-y-4">
-              {editingItem ? (
-                /* Inline Add/Edit Form */
-                <form onSubmit={handleSaveItem} className="border border-green-200 bg-green-50/10 rounded-2xl p-4 space-y-4">
-                  <h3 className="font-bold text-sm text-neutral-800 border-b pb-2 mb-2 flex items-center justify-between">
-                    <span>{isAddingNew ? '✨ Add New Item' : '📝 Edit Item'}</span>
-                    <button 
-                      type="button" 
-                      onClick={() => { setEditingItem(null); setIsAddingNew(false) }}
-                      className="text-xs text-neutral-400 hover:text-neutral-600"
-                    >
-                      Cancel
-                    </button>
-                  </h3>
-
-                  {/* Name & Price */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <label className="block">
-                        <span className="mb-1 block text-xs font-semibold text-neutral-700">Item Name</span>
-                        <input
-                          value={editingItem.name}
-                          onChange={(e) => setEditingItem(prev => ({ ...prev, name: e.target.value }))}
-                          className="input-field text-sm py-1.5 px-3 bg-white"
-                          placeholder="e.g. Garlic Pizza"
-                          required
-                        />
-                      </label>
-                    </div>
-                    <div>
-                      <label className="block">
-                        <span className="mb-1 block text-xs font-semibold text-neutral-700">Price</span>
-                        <div className="input-wrapper py-1 bg-white">
-                          <span className="text-xs font-medium text-neutral-500 mr-1">{currencySymbol}</span>
-                          <input 
-                            value={editingItem.price} 
-                            onChange={(e) => {
-                              let val = e.target.value.replace(/[^0-9.]/g, '')
-                              const parts = val.split('.')
-                              if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('')
-                              setEditingItem(prev => ({ ...prev, price: val }))
-                            }}
-                            placeholder="0.00" 
-                            className="w-full text-sm outline-none bg-transparent"
-                            required
-                          />
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Category Selection */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block">
-                        <span className="mb-1 block text-xs font-semibold text-neutral-700">Category</span>
-                        <select
-                          value={editingItem.sectionId}
-                          onChange={(e) => {
-                            const secId = e.target.value
-                            const section = draftMenu.sections.find(s => s.id === secId)
-                            const defaultSubId = section?.subcategories?.[0]?.id || ''
-                            setEditingItem(prev => ({
-                              ...prev,
-                              sectionId: secId,
-                              subcategoryId: defaultSubId
-                            }))
-                          }}
-                          className="input-field text-xs py-1.5 px-3 bg-white"
-                        >
-                          {draftMenu.sections.map(sec => (
-                            <option key={sec.id} value={sec.id}>{sec.title}</option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    {/* Subcategory */}
-                    {(() => {
-                      const selectedSection = draftMenu.sections.find(s => s.id === editingItem.sectionId)
-                      if (!selectedSection || !selectedSection.subcategories || selectedSection.subcategories.length === 0) return null
-                      return (
-                        <div>
-                          <label className="block">
-                            <span className="mb-1 block text-xs font-semibold text-neutral-700">Subcategory</span>
-                            <select
-                              value={editingItem.subcategoryId}
-                              onChange={(e) => setEditingItem(prev => ({ ...prev, subcategoryId: e.target.value }))}
-                              className="input-field text-xs py-1.5 px-3 bg-white"
-                            >
-                              <option value="">None (Direct Item)</option>
-                              {selectedSection.subcategories.map(sub => (
-                                <option key={sub.id} value={sub.id}>{sub.title}</option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                      )
-                    })()}
-                  </div>
-
-                  {/* Description */}
-                  <div>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-semibold text-neutral-700">Description</span>
-                      <textarea
-                        value={editingItem.description}
-                        onChange={(e) => setEditingItem(prev => ({ ...prev, description: e.target.value }))}
-                        rows={2}
-                        className="input-field text-xs py-1.5 px-3 bg-white"
-                        placeholder="Ingredients, dietary details, or allergy info"
-                      />
-                    </label>
-                  </div>
-
-                  {/* Image Upload */}
-                  <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-neutral-200">
-                    <div className="flex-shrink-0">
-                      {editingItem.imageUrl ? (
-                        <div className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-300">
-                          <img src={editingItem.imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setEditingItem(prev => ({ ...prev, imageUrl: '' }))}
-                            className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            title="Remove image"
-                          >
-                            <IconTrash className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <label 
-                          className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition ${
-                            uploadingItemImage[editingItem.id] 
-                              ? 'border-neutral-300 bg-neutral-100' 
-                              : !isSupabaseConfigured || !restaurantId
-                                ? 'border-neutral-200 bg-neutral-100/50 cursor-not-allowed opacity-50'
-                                : 'border-neutral-300 hover:border-green-500 bg-white hover:bg-neutral-50'
-                          }`}
-                        >
-                          {uploadingItemImage[editingItem.id] ? (
-                            <span className="text-[9px] text-neutral-500 animate-pulse font-medium">Uploading...</span>
-                          ) : (
-                            <>
-                              <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                              </svg>
-                              <span className="text-[9px] text-neutral-400 font-semibold mt-0.5">Upload</span>
-                            </>
-                          )}
-                          {isSupabaseConfigured && restaurantId && (
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              disabled={uploadingItemImage[editingItem.id]}
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0]
-                                if (!file) return
-                                if (file.size > 1024 * 1024) {
-                                  alert('Image size exceeds 1 MB limit. Please upload a smaller image.')
-                                  return
-                                }
-                                try {
-                                  setUploadingItemImage(prev => ({ ...prev, [editingItem.id]: true }))
-                                  const url = await uploadMenuItemImage(restaurantId, editingItem.id, file)
-                                  setEditingItem(prev => ({ ...prev, imageUrl: url }))
-                                } catch (err) {
-                                  alert(err.message || 'Failed to upload image')
-                                } finally {
-                                  setUploadingItemImage(prev => ({ ...prev, [editingItem.id]: false }))
-                                }
-                              }}
-                            />
-                          )}
-                        </label>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="block text-xs font-semibold text-neutral-700">Image Thumbnail</span>
-                      <span className="block text-[10px] text-neutral-500 mt-0.5 leading-normal">
-                        Max 1MB size. Fits square preview.
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Form Actions */}
-                  <div className="flex gap-2 justify-end pt-2">
-                    <button
-                      type="button"
-                      onClick={() => { setEditingItem(null); setIsAddingNew(false) }}
-                      className="btn-ghost text-xs px-3 py-1.5 border-neutral-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn-green text-xs px-4 py-1.5"
-                    >
-                      {isAddingNew ? 'Add Item' : 'Save Changes'}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                /* Main List View */
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Item Listings</h3>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (draftMenu.sections.length === 0) {
-                          alert('Please add a section/category under Setup tab first.')
-                          return
-                        }
-                        setEditingItem({
-                          id: createId('itm'),
-                          name: '',
-                          description: '',
-                          price: '',
-                          imageUrl: '',
-                          sectionId: draftMenu.sections[0].id,
-                          subcategoryId: ''
-                        })
-                        setIsAddingNew(true)
-                      }}
-                      className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1"
-                    >
-                      <IconPlus className="w-3.5 h-3.5" /> Add Item
-                    </button>
-                  </div>
-
-                  {/* Grouped Listings */}
-                  {draftMenu?.sections.length === 0 ? (
-                    <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
-                      <p className="text-neutral-400 text-sm">No sections created yet.</p>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('setup')}
-                        className="mt-2 text-xs font-semibold text-green-600 hover:underline"
-                      >
-                        Go to Setup to add categories
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-5">
-                      {draftMenu.sections.map((section) => {
-                        const directItems = section.items || []
-                        const subcategories = section.subcategories || []
-                        
-                        const hasItems = directItems.length > 0 || subcategories.some(sub => sub.items && sub.items.length > 0)
-                        
-                        return (
-                          <div key={section.id} className="bg-neutral-50/50 border border-neutral-100 rounded-xl p-3.5">
-                            {/* Section Title */}
-                            <div className="flex items-center justify-between border-b border-neutral-200/60 pb-1.5 mb-2.5">
-                              <h4 className="font-bold text-xs text-neutral-700 tracking-wider uppercase">{section.title}</h4>
-                            </div>
-
-                            {/* Direct items */}
-                            {directItems.map(item => renderListItemRow(item, section.id, null))}
-
-                            {/* Subcategories */}
-                            {subcategories.map(sub => {
-                              const isExpanded = expandedSubcategories[sub.id]
-                              const itemCount = sub.items?.length || 0
-
-                              return (
-                                <div key={sub.id} className="mt-3 rounded-xl border border-neutral-200/80 bg-white">
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleSubcategory(sub.id)}
-                                    className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-xs font-bold text-neutral-700 uppercase tracking-widest bg-neutral-50 hover:bg-neutral-100 rounded-t-xl"
-                                  >
-                                    <span>{sub.title}</span>
-                                    <span className="flex items-center gap-2 text-neutral-500">
-                                      <span className="text-[10px] font-medium">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
-                                      <span className="text-sm">{isExpanded ? '▾' : '▸'}</span>
-                                    </span>
-                                  </button>
-                                  {isExpanded && (
-                                    <div className="space-y-2 px-3 py-2 border-t border-neutral-200/80">
-                                      {sub.items && sub.items.length > 0 ? (
-                                        sub.items.map(item => renderListItemRow(item, section.id, sub.id))
-                                      ) : (
-                                        <p className="text-[10px] text-neutral-400 italic">No items here.</p>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })}
-
-                            {!hasItems && (
-                              <p className="text-[11px] text-neutral-400 italic text-center py-2">No items in this category yet.</p>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'setup' && (
-            <div className="space-y-5">
-              {/* Restaurant Name & Menu Title */}
-              <div className="grid grid-cols-2 gap-3 bg-neutral-50/30 p-3.5 rounded-xl border border-neutral-200/60">
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-neutral-700">Restaurant Name</span>
-                  <input
-                    value={draftMenu.restaurantName}
-                    onChange={(e) => updateDraft((d) => ({ ...d, restaurantName: e.target.value }))}
-                    className="input-field text-xs py-1.5 px-3 bg-white"
-                    placeholder="Name of restaurant"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-neutral-700">Menu Title</span>
-                  <input
-                    value={draftMenu.menuTitle}
-                    onChange={(e) => updateDraft((d) => ({ ...d, menuTitle: e.target.value }))}
-                    className="input-field text-xs py-1.5 px-3 bg-white"
-                    placeholder="e.g. Dinner Menu"
-                  />
-                </label>
-              </div>
-
-              {/* Notes */}
-              <label className="block">
-                <span className="mb-1 block text-xs font-semibold text-neutral-700">Menu Notes</span>
-                <textarea
-                  value={draftMenu.notes}
-                  onChange={(e) => updateDraft((d) => ({ ...d, notes: e.target.value }))}
-                  rows={2}
-                  className="input-field text-xs py-1.5 px-3 bg-white"
-                  placeholder="Optional timing details or highlights"
-                />
-              </label>
-
-              {/* Template Selector */}
-              <div>
-                <span className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Select Template</span>
-                <div className="grid grid-cols-3 gap-2">
-                  {menuTemplates.map((template) => {
-                    const isActive = template.id === selectedTemplateId
-                    return (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => loadTemplate(template.id)}
-                        className={`rounded-xl border p-2.5 text-left transition duration-150 flex flex-col justify-between h-[80px] ${isActive
-                            ? 'border-green-500 bg-green-50/40 text-green-900'
-                            : 'border-neutral-200 bg-white text-neutral-800 hover:border-green-300'
-                          }`}
-                      >
-                        <p className="text-xs font-bold truncate w-full">{template.label}</p>
-                        <p className="text-[9px] text-neutral-500 leading-normal line-clamp-2 mt-1">{template.description}</p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Category / Section Management */}
-              <div className="space-y-3 pt-3 border-t border-neutral-100">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Categories / Sections</span>
-                  <button
-                    type="button"
-                    onClick={addSection}
-                    className="text-xs font-semibold text-green-700 hover:text-green-800 flex items-center gap-0.5"
-                  >
-                    <IconPlus className="w-3.5 h-3.5" /> Add Category
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {draftMenu.sections.map((section) => (
-                    <div key={section.id} className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/80 space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <input
-                          value={section.title}
-                          onChange={(e) => updateSectionField(section.id, e.target.value)}
-                          className="input-field text-xs font-semibold flex-1 py-1.5 px-3 bg-white"
-                          placeholder="Category Title"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (draftMenu.sections.length <= 1) {
-                              alert('You must have at least one category.')
-                              return
-                            }
-                            if (window.confirm(`Delete "${section.title}" category? All items inside will be deleted.`)) {
-                              removeSection(section.id)
-                            }
-                          }}
-                          className="p-1.5 text-neutral-400 hover:text-red-500 transition"
-                          title="Delete Category"
-                        >
-                          <IconTrash className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Subcategories */}
-                      <div className="pl-3 border-l-2 border-neutral-300 space-y-2">
-                        {section.subcategories?.map(sub => (
-                          <div key={sub.id} className="flex items-center gap-1.5">
-                            <input
-                              value={sub.title}
-                              onChange={(e) => updateSubcategoryTitle(section.id, sub.id, e.target.value)}
-                              className="input-field text-[11px] font-medium flex-1 py-1 px-2.5 bg-white"
-                              placeholder="Subcategory Name"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeSubcategory(section.id, sub.id)}
-                              className="text-neutral-400 hover:text-red-500 font-bold px-1"
-                              title="Delete Subcategory"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => addSubcategory(section.id)}
-                          className="text-[10px] font-semibold text-neutral-500 hover:text-green-600 flex items-center gap-0.5 mt-1"
-                        >
-                          <IconPlus className="w-3 h-3" /> Add Subcategory
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preview Collapsible Accordion */}
-              <div className="pt-3 border-t border-neutral-100">
-                <details className="group border border-neutral-200 rounded-xl bg-white overflow-hidden">
-                  <summary className="flex items-center justify-between p-3 text-xs font-bold text-neutral-700 bg-neutral-50 cursor-pointer select-none">
-                    <span>Live Preview Mockup</span>
-                    <span className="text-neutral-400 group-open:rotate-180 transition-transform">▼</span>
-                  </summary>
-                  <div className="p-3 border-t border-neutral-200 max-h-[400px] overflow-y-auto bg-neutral-100/30">
-                    <TemplateMenuPreview menu={{ ...draftMenu, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone, restaurantWebsite: restaurantSettings?.website }} currencySymbol={currencySymbol} />
-                  </div>
-                </details>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     )
   }
 
-
-
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4 border-b border-neutral-100 px-5 py-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">Menu Workspace</p>
+          <h2 className="mt-0.5 text-base font-bold text-neutral-900 truncate max-w-[180px]">
+            {draftMenu?.menuTitle || 'Untitled Menu'}
+          </h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={saveMenu}
+            disabled={!draftMenu || isSaving}
+            className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1.5"
+          >
+            {isSaving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            onClick={() => setShowBuilder(false)}
+            className="btn-ghost p-1.5 rounded-lg border-neutral-200"
+            title="Close Builder"
+          >
+            <IconX className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Status bar */}
+      {saveStatus && (
+        <div className="px-5 py-2 text-xs border-b font-medium text-green-700 bg-green-50/50 border-neutral-100 flex items-center justify-between">
+          <span className="truncate">{saveStatus}</span>
+        </div>
+      )}
+
+      {/* Tab Buttons */}
+      <div className="flex border-b border-neutral-100 bg-neutral-50/50 p-1 gap-1">
+        <button
+          type="button"
+          onClick={() => { setActiveTab('items'); setEditingItem(null); setIsAddingNew(false) }}
+          className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'items' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+        >
+          Menu Items
+        </button>
+        <button
+          type="button"
+          onClick={() => { setActiveTab('setup'); setEditingItem(null); setIsAddingNew(false) }}
+          className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'setup' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+        >
+          Menu Setup
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-y-auto p-5">
+        {activeTab === 'items' && (
+          <div className="space-y-4">
+            {editingItem ? (
+              /* Inline Add/Edit Form */
+              <form onSubmit={handleSaveItem} className="border border-green-200 bg-green-50/10 rounded-2xl p-4 space-y-4">
+                <h3 className="font-bold text-sm text-neutral-800 border-b pb-2 mb-2 flex items-center justify-between">
+                  <span>{isAddingNew ? '✨ Add New Item' : '📝 Edit Item'}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingItem(null); setIsAddingNew(false) }}
+                    className="text-xs text-neutral-400 hover:text-neutral-600"
+                  >
+                    Cancel
+                  </button>
+                </h3>
+
+                {/* Name & Price */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-neutral-700">Item Name</span>
+                      <input
+                        value={editingItem.name}
+                        onChange={(e) => setEditingItem(prev => ({ ...prev, name: e.target.value }))}
+                        className="input-field text-sm py-1.5 px-3 bg-white"
+                        placeholder="e.g. Garlic Pizza"
+                        required
+                      />
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-neutral-700">Price</span>
+                      <div className="input-wrapper py-1 bg-white">
+                        <span className="text-xs font-medium text-neutral-500 mr-1">{currencySymbol}</span>
+                        <input
+                          value={editingItem.price}
+                          onChange={(e) => {
+                            let val = e.target.value.replace(/[^0-9.]/g, '')
+                            const parts = val.split('.')
+                            if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('')
+                            setEditingItem(prev => ({ ...prev, price: val }))
+                          }}
+                          placeholder="0.00"
+                          className="w-full text-sm outline-none bg-transparent"
+                          required
+                        />
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Category Selection */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block">
+                      <span className="mb-1 block text-xs font-semibold text-neutral-700">Category</span>
+                      <select
+                        value={editingItem.sectionId}
+                        onChange={(e) => {
+                          const secId = e.target.value
+                          const section = draftMenu.sections.find(s => s.id === secId)
+                          const defaultSubId = section?.subcategories?.[0]?.id || ''
+                          setEditingItem(prev => ({
+                            ...prev,
+                            sectionId: secId,
+                            subcategoryId: defaultSubId
+                          }))
+                        }}
+                        className="input-field text-xs py-1.5 px-3 bg-white"
+                      >
+                        {draftMenu.sections.map(sec => (
+                          <option key={sec.id} value={sec.id}>{sec.title}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  {/* Subcategory */}
+                  {(() => {
+                    const selectedSection = draftMenu.sections.find(s => s.id === editingItem.sectionId)
+                    if (!selectedSection || !selectedSection.subcategories || selectedSection.subcategories.length === 0) return null
+                    return (
+                      <div>
+                        <label className="block">
+                          <span className="mb-1 block text-xs font-semibold text-neutral-700">Subcategory</span>
+                          <select
+                            value={editingItem.subcategoryId}
+                            onChange={(e) => setEditingItem(prev => ({ ...prev, subcategoryId: e.target.value }))}
+                            className="input-field text-xs py-1.5 px-3 bg-white"
+                          >
+                            <option value="">None (Direct Item)</option>
+                            {selectedSection.subcategories.map(sub => (
+                              <option key={sub.id} value={sub.id}>{sub.title}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold text-neutral-700">Description</span>
+                    <textarea
+                      value={editingItem.description}
+                      onChange={(e) => setEditingItem(prev => ({ ...prev, description: e.target.value }))}
+                      rows={2}
+                      className="input-field text-xs py-1.5 px-3 bg-white"
+                      placeholder="Ingredients, dietary details, or allergy info"
+                    />
+                  </label>
+                </div>
+
+                {/* Image Upload */}
+                <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-neutral-200">
+                  <div className="flex-shrink-0">
+                    {editingItem.imageUrl ? (
+                      <div className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-300">
+                        <img src={editingItem.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setEditingItem(prev => ({ ...prev, imageUrl: '' }))}
+                          className="absolute inset-0 bg-black/60 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          title="Remove image"
+                        >
+                          <IconTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label
+                        className={`w-16 h-16 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition ${uploadingItemImage[editingItem.id]
+                            ? 'border-neutral-300 bg-neutral-100'
+                            : !isSupabaseConfigured || !restaurantId
+                              ? 'border-neutral-200 bg-neutral-100/50 cursor-not-allowed opacity-50'
+                              : 'border-neutral-300 hover:border-green-500 bg-white hover:bg-neutral-50'
+                          }`}
+                      >
+                        {uploadingItemImage[editingItem.id] ? (
+                          <span className="text-[9px] text-neutral-500 animate-pulse font-medium">Uploading...</span>
+                        ) : (
+                          <>
+                            <svg className="w-5 h-5 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span className="text-[9px] text-neutral-400 font-semibold mt-0.5">Upload</span>
+                          </>
+                        )}
+                        {isSupabaseConfigured && restaurantId && (
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            disabled={uploadingItemImage[editingItem.id]}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              if (file.size > 1024 * 1024) {
+                                alert('Image size exceeds 1 MB limit. Please upload a smaller image.')
+                                return
+                              }
+                              try {
+                                setUploadingItemImage(prev => ({ ...prev, [editingItem.id]: true }))
+                                const url = await uploadMenuItemImage(restaurantId, editingItem.id, file)
+                                setEditingItem(prev => ({ ...prev, imageUrl: url }))
+                              } catch (err) {
+                                alert(err.message || 'Failed to upload image')
+                              } finally {
+                                setUploadingItemImage(prev => ({ ...prev, [editingItem.id]: false }))
+                              }
+                            }}
+                          />
+                        )}
+                      </label>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-xs font-semibold text-neutral-700">Image Thumbnail</span>
+                    <span className="block text-[10px] text-neutral-500 mt-0.5 leading-normal">
+                      Max 1MB size. Fits square preview.
+                    </span>
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingItem(null); setIsAddingNew(false) }}
+                    className="btn-ghost text-xs px-3 py-1.5 border-neutral-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-green text-xs px-4 py-1.5"
+                  >
+                    {isAddingNew ? 'Add Item' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Main List View */
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Item Listings</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (draftMenu.sections.length === 0) {
+                        alert('Please add a section/category under Setup tab first.')
+                        return
+                      }
+                      setEditingItem({
+                        id: createId('itm'),
+                        name: '',
+                        description: '',
+                        price: '',
+                        imageUrl: '',
+                        sectionId: draftMenu.sections[0].id,
+                        subcategoryId: ''
+                      })
+                      setIsAddingNew(true)
+                    }}
+                    className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1"
+                  >
+                    <IconPlus className="w-3.5 h-3.5" /> Add Item
+                  </button>
+                </div>
+
+                {/* Grouped Listings */}
+                {draftMenu?.sections.length === 0 ? (
+                  <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
+                    <p className="text-neutral-400 text-sm">No sections created yet.</p>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('setup')}
+                      className="mt-2 text-xs font-semibold text-green-600 hover:underline"
+                    >
+                      Go to Setup to add categories
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {draftMenu.sections.map((section) => {
+                      const directItems = section.items || []
+                      const subcategories = section.subcategories || []
+
+                      const hasItems = directItems.length > 0 || subcategories.some(sub => sub.items && sub.items.length > 0)
+
+                      return (
+                        <div key={section.id} className="bg-neutral-50/50 border border-neutral-100 rounded-xl p-3.5">
+                          {/* Section Title */}
+                          <div className="flex items-center justify-between border-b border-neutral-200/60 pb-1.5 mb-2.5">
+                            <h4 className="font-bold text-xs text-neutral-700 tracking-wider uppercase">{section.title}</h4>
+                          </div>
+
+                          {/* Direct items */}
+                          {directItems.map(item => renderListItemRow(item, section.id, null))}
+
+                          {/* Subcategories */}
+                          {subcategories.map(sub => {
+                            const isExpanded = expandedSubcategories[sub.id]
+                            const itemCount = sub.items?.length || 0
+
+                            return (
+                              <div key={sub.id} className="mt-3 rounded-xl border border-neutral-200/80 bg-white">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleSubcategory(sub.id)}
+                                  className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-xs font-bold text-neutral-700 uppercase tracking-widest bg-neutral-50 hover:bg-neutral-100 rounded-t-xl"
+                                >
+                                  <span>{sub.title}</span>
+                                  <span className="flex items-center gap-2 text-neutral-500">
+                                    <span className="text-[10px] font-medium">{itemCount} item{itemCount !== 1 ? 's' : ''}</span>
+                                    <span className="text-sm">{isExpanded ? '▾' : '▸'}</span>
+                                  </span>
+                                </button>
+                                {isExpanded && (
+                                  <div className="space-y-2 px-3 py-2 border-t border-neutral-200/80">
+                                    {sub.items && sub.items.length > 0 ? (
+                                      sub.items.map(item => renderListItemRow(item, section.id, sub.id))
+                                    ) : (
+                                      <p className="text-[10px] text-neutral-400 italic">No items here.</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+
+                          {!hasItems && (
+                            <p className="text-[11px] text-neutral-400 italic text-center py-2">No items in this category yet.</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'setup' && (
+          <div className="space-y-5">
+            {/* Restaurant Name & Menu Title */}
+            <div className="grid grid-cols-2 gap-3 bg-neutral-50/30 p-3.5 rounded-xl border border-neutral-200/60">
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-neutral-700">Restaurant Name</span>
+                <input
+                  value={draftMenu.restaurantName}
+                  onChange={(e) => updateDraft((d) => ({ ...d, restaurantName: e.target.value }))}
+                  className="input-field text-xs py-1.5 px-3 bg-white"
+                  placeholder="Name of restaurant"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-neutral-700">Menu Title</span>
+                <input
+                  value={draftMenu.menuTitle}
+                  onChange={(e) => updateDraft((d) => ({ ...d, menuTitle: e.target.value }))}
+                  className="input-field text-xs py-1.5 px-3 bg-white"
+                  placeholder="e.g. Dinner Menu"
+                />
+              </label>
+            </div>
+
+            {/* Notes */}
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold text-neutral-700">Menu Notes</span>
+              <textarea
+                value={draftMenu.notes}
+                onChange={(e) => updateDraft((d) => ({ ...d, notes: e.target.value }))}
+                rows={2}
+                className="input-field text-xs py-1.5 px-3 bg-white"
+                placeholder="Optional timing details or highlights"
+              />
+            </label>
+
+            {/* Template Selector */}
+            <div>
+              <span className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Select Template</span>
+              <div className="grid grid-cols-3 gap-2">
+                {menuTemplates.map((template) => {
+                  const isActive = template.id === selectedTemplateId
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => loadTemplate(template.id)}
+                      className={`rounded-xl border p-2.5 text-left transition duration-150 flex flex-col justify-between h-[80px] ${isActive
+                        ? 'border-green-500 bg-green-50/40 text-green-900'
+                        : 'border-neutral-200 bg-white text-neutral-800 hover:border-green-300'
+                        }`}
+                    >
+                      <p className="text-xs font-bold truncate w-full">{template.label}</p>
+                      <p className="text-[9px] text-neutral-500 leading-normal line-clamp-2 mt-1">{template.description}</p>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Category / Section Management */}
+            <div className="space-y-3 pt-3 border-t border-neutral-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Categories / Sections</span>
+                <button
+                  type="button"
+                  onClick={addSection}
+                  className="text-xs font-semibold text-green-700 hover:text-green-800 flex items-center gap-0.5"
+                >
+                  <IconPlus className="w-3.5 h-3.5" /> Add Category
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {draftMenu.sections.map((section) => (
+                  <div key={section.id} className="p-3 bg-neutral-50 rounded-xl border border-neutral-200/80 space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        value={section.title}
+                        onChange={(e) => updateSectionField(section.id, e.target.value)}
+                        className="input-field text-xs font-semibold flex-1 py-1.5 px-3 bg-white"
+                        placeholder="Category Title"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (draftMenu.sections.length <= 1) {
+                            alert('You must have at least one category.')
+                            return
+                          }
+                          if (window.confirm(`Delete "${section.title}" category? All items inside will be deleted.`)) {
+                            removeSection(section.id)
+                          }
+                        }}
+                        className="p-1.5 text-neutral-400 hover:text-red-500 transition"
+                        title="Delete Category"
+                      >
+                        <IconTrash className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Subcategories */}
+                    <div className="pl-3 border-l-2 border-neutral-300 space-y-2">
+                      {section.subcategories?.map(sub => (
+                        <div key={sub.id} className="flex items-center gap-1.5">
+                          <input
+                            value={sub.title}
+                            onChange={(e) => updateSubcategoryTitle(section.id, sub.id, e.target.value)}
+                            className="input-field text-[11px] font-medium flex-1 py-1 px-2.5 bg-white"
+                            placeholder="Subcategory Name"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeSubcategory(section.id, sub.id)}
+                            className="text-neutral-400 hover:text-red-500 font-bold px-1"
+                            title="Delete Subcategory"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addSubcategory(section.id)}
+                        className="text-[10px] font-semibold text-neutral-500 hover:text-green-600 flex items-center gap-0.5 mt-1"
+                      >
+                        <IconPlus className="w-3 h-3" /> Add Subcategory
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Preview Collapsible Accordion */}
+            <div className="pt-3 border-t border-neutral-100">
+              <details className="group border border-neutral-200 rounded-xl bg-white overflow-hidden">
+                <summary className="flex items-center justify-between p-3 text-xs font-bold text-neutral-700 bg-neutral-50 cursor-pointer select-none">
+                  <span>Live Preview Mockup</span>
+                  <span className="text-neutral-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="p-3 border-t border-neutral-200 max-h-[400px] overflow-y-auto bg-neutral-100/30">
+                  <TemplateMenuPreview menu={{ ...draftMenu, restaurantAddress: restaurantSettings?.address, restaurantPhone: restaurantSettings?.phone, restaurantWebsite: restaurantSettings?.website }} currencySymbol={currencySymbol} />
+                </div>
+              </details>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
+
+
+
 function Editor() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -1215,7 +1213,7 @@ function Editor() {
       const qrSize = 100 // 100mm
       const qrX = (pageWidth - qrSize) / 2
       const qrY = 110
-      
+
       // Draw background board for the QR
       doc.setFillColor(255, 255, 255)
       doc.setDrawColor(229, 231, 235) // border neutral-200
@@ -1256,8 +1254,8 @@ function Editor() {
 
   // Restaurant / settings state
   const [restaurantSettings, setRestaurantSettings] = useState(null)
-  const [tableTrackingEnabled,setTableTrackingEnabled] = useState(false)
-  const [tableCount,setTableCount] = useState(0)
+  const [tableTrackingEnabled, setTableTrackingEnabled] = useState(false)
+  const [tableCount, setTableCount] = useState(0)
   const [isRestaurantLoading, setIsRestaurantLoading] = useState(false)
   const [isRestaurantUpdating, setIsRestaurantUpdating] = useState(false)
   const restaurantId = profile?.restaurantId || null
@@ -1273,55 +1271,55 @@ function Editor() {
   }, [])
 
   //toggle service fee
-  const handleToggleServiceFee = async()=>{
+  const handleToggleServiceFee = async () => {
 
-  if(!restaurantId || !restaurantSettings)
-    return
-
-
-  const next =
-  !restaurantSettings.serviceFeeEnabled
+    if (!restaurantId || !restaurantSettings)
+      return
 
 
-  setRestaurantSettings(c=>({
-    ...c,
-    serviceFeeEnabled:next
-  }))
+    const next =
+      !restaurantSettings.serviceFeeEnabled
 
 
-  await saveRestaurantSettings(
-    restaurantId,
-    {
-      ...restaurantSettings,
-      serviceFeeEnabled:next
-    }
-  )
+    setRestaurantSettings(c => ({
+      ...c,
+      serviceFeeEnabled: next
+    }))
+
+
+    await saveRestaurantSettings(
+      restaurantId,
+      {
+        ...restaurantSettings,
+        serviceFeeEnabled: next
+      }
+    )
 
   }
-  
+
   //Handle Service Fee Percentage in settings dashboard
   const handleServiceFeePercentageChange =
-  async(value)=>{
+    async (value) => {
 
-  if(!restaurantId || !restaurantSettings)
-    return
-
-
-  setRestaurantSettings(c=>({
-    ...c,
-    serviceFeePercentage:value
-  }))
+      if (!restaurantId || !restaurantSettings)
+        return
 
 
-  await saveRestaurantSettings(
-    restaurantId,
-    {
-    ...restaurantSettings,
-    serviceFeePercentage:value
+      setRestaurantSettings(c => ({
+        ...c,
+        serviceFeePercentage: value
+      }))
+
+
+      await saveRestaurantSettings(
+        restaurantId,
+        {
+          ...restaurantSettings,
+          serviceFeePercentage: value
+        }
+      )
+
     }
-  )
-
-  }
 
   // Load saved menus
   useEffect(() => {
@@ -1334,11 +1332,11 @@ function Editor() {
         menus.map(async (m) => {
           const slug = m.slug || m.id
           const targetUrl =
-          restaurantSettings?.tableTrackingEnabled
-          ?
-          `${window.location.origin}/menu/${slug}/tableNo-1`
-          :
-          `${window.location.origin}/menu/${slug}`
+            restaurantSettings?.tableTrackingEnabled
+              ?
+              `${window.location.origin}/menu/${slug}/tableNo-1`
+              :
+              `${window.location.origin}/menu/${slug}`
           let qrDataUrl = m.qrDataUrl || ''
           if (!qrDataUrl) {
             try { qrDataUrl = await QRCode.toDataURL(targetUrl, { width: 320, margin: 1, color: { dark: '#101010', light: '#ffffff' } }) }
@@ -1364,24 +1362,24 @@ function Editor() {
       if (settings) {
         setRestaurantSettings(settings)
         setTableTrackingEnabled(
-        Boolean(settings.tableTrackingEnabled)
-      )
-        setTableCount(
-        Number(settings.tableCount || 0)
+          Boolean(settings.tableTrackingEnabled)
         )
-      }else {
-        const defaults = { 
-          name: '', 
-          slug: '', 
+        setTableCount(
+          Number(settings.tableCount || 0)
+        )
+      } else {
+        const defaults = {
+          name: '',
+          slug: '',
           website: '',
           isActive: true,
           allowOnlineOrders: false,
-          serviceFeeEnabled:false,
-          serviceFeePercentage:10,
-          tableTrackingEnabled:false,
-          tableCount:0
+          serviceFeeEnabled: false,
+          serviceFeePercentage: 10,
+          tableTrackingEnabled: false,
+          tableCount: 0
 
-          }
+        }
         setRestaurantSettings(defaults)
         await saveRestaurantSettings(restaurantId, defaults)
       }
@@ -1458,37 +1456,37 @@ function Editor() {
     await saveRestaurantSettings(restaurantId, { ...restaurantSettings, allowOnlineOrders: nextValue })
     setIsRestaurantUpdating(false)
   }
-  const handleToggleTableTracking = async()=>{
-    if(!restaurantId || !restaurantSettings)
-    return
+  const handleToggleTableTracking = async () => {
+    if (!restaurantId || !restaurantSettings)
+      return
     const next =
-    !tableTrackingEnabled
+      !tableTrackingEnabled
     setTableTrackingEnabled(next)
-    const updated={
-    ...restaurantSettings,
-    tableTrackingEnabled:next,
-    tableCount:
-    next ? tableCount : 0
+    const updated = {
+      ...restaurantSettings,
+      tableTrackingEnabled: next,
+      tableCount:
+        next ? tableCount : 0
     }
     setRestaurantSettings(updated)
     await saveRestaurantSettings(
-    restaurantId,
-    updated
+      restaurantId,
+      updated
     )
   }
-  const handleTableCountChange = async(value)=>{
+  const handleTableCountChange = async (value) => {
     const count =
-    Number(value)
+      Number(value)
     setTableCount(count)
-    const updated={
-    ...restaurantSettings,
-    tableTrackingEnabled:true,
-    tableCount:count
+    const updated = {
+      ...restaurantSettings,
+      tableTrackingEnabled: true,
+      tableCount: count
     }
     setRestaurantSettings(updated)
     await saveRestaurantSettings(
-    restaurantId,
-    updated
+      restaurantId,
+      updated
     )
   }
   const handleCurrencyChange = async (newCurrency) => {
@@ -1653,7 +1651,7 @@ function Editor() {
         title: 'New Subcategory',
         items: [createEmptyItem()]
       }
-      
+
       // Migrate existing direct items to a "General" subcategory first if they exist
       if (s.items && s.items.length > 0) {
         const generalSub = {
@@ -1667,7 +1665,7 @@ function Editor() {
           subcategories: [generalSub, newSub]
         }
       }
-      
+
       const existingSubs = s.subcategories || []
       return {
         ...s,
@@ -1796,45 +1794,42 @@ function Editor() {
     setActiveSection('my-menu')
     setShowBuilder(false)
   }
-  const openQrPreview = async(menu)=>{
+  const openQrPreview = async (menu) => {
     const slug =
-    menu.remoteId || menu.slug
-    let qrList=[]
-    if(restaurantSettings?.tableTrackingEnabled)
-    {
-    for(
-    let i=1;
-    i<=restaurantSettings.tableCount;
-    i++
-    )
-    {
-    qrList.push({
-    table:i,
-    url:
-    `${window.location.origin}/menu/${slug}/tableNo-${i}`
-    })
+      menu.remoteId || menu.slug
+    let qrList = []
+    if (restaurantSettings?.tableTrackingEnabled) {
+      for (
+        let i = 1;
+        i <= restaurantSettings.tableCount;
+        i++
+      ) {
+        qrList.push({
+          table: i,
+          url:
+            `${window.location.origin}/menu/${slug}/tableNo-${i}`
+        })
+      }
     }
-    }
-    else
-    {
-    qrList.push({
-    table:null,
-    url:
-    `${window.location.origin}/menu/${slug}`
-    })
+    else {
+      qrList.push({
+        table: null,
+        url:
+          `${window.location.origin}/menu/${slug}`
+      })
     }
     const generated =
-    await Promise.all(
-    qrList.map(async(q)=>({
-    ...q,
-    qrDataUrl:
-    await QRCode.toDataURL(q.url)
-    }))
-    )
+      await Promise.all(
+        qrList.map(async (q) => ({
+          ...q,
+          qrDataUrl:
+            await QRCode.toDataURL(q.url)
+        }))
+      )
     setQrPreview({
-    menuTitle:menu.menuTitle,
-    restaurantName:menu.restaurantName,
-    qrs:generated
+      menuTitle: menu.menuTitle,
+      restaurantName: menu.restaurantName,
+      qrs: generated
     })
   }
   const closeQrPreview = () => setQrPreview(null)
@@ -1969,7 +1964,7 @@ function Editor() {
         {/* When builder is open, it takes over the full main area */}
         {showBuilder ? (
           <div className="h-screen flex flex-col">
-            <BuilderInlinePanel {...{draftMenu, saveMenu, isSaving, setShowBuilder, saveStatus, updateDraft, menuTemplates, selectedTemplateId, loadTemplate, addSection, updateSectionField, removeSection, removeSubcategory, addSubcategory, updateSubcategoryTitle, restaurantSettings, currencySymbol, restaurantId, updateSectionList, isSupabaseConfigured, uploadMenuItemImage}} />
+            <BuilderInlinePanel {...{ draftMenu, saveMenu, isSaving, setShowBuilder, saveStatus, updateDraft, menuTemplates, selectedTemplateId, loadTemplate, addSection, updateSectionField, removeSection, removeSubcategory, addSubcategory, updateSubcategoryTitle, restaurantSettings, currencySymbol, restaurantId, updateSectionList, isSupabaseConfigured, uploadMenuItemImage }} />
           </div>
         ) : (
           <>
@@ -2020,10 +2015,10 @@ function Editor() {
               tableTrackingEnabled={tableTrackingEnabled}
               tableCount={tableCount}
               handleToggleTableTracking={
-              handleToggleTableTracking
+                handleToggleTableTracking
               }
               handleTableCountChange={
-              handleTableCountChange
+                handleTableCountChange
               }
               handleUpdateBackupDatabase={handleUpdateBackupDatabase}
               waiterCodes={waiterCodes}
@@ -2071,20 +2066,20 @@ function Editor() {
                       <h3 className="mb-3 font-bold text-neutral-900 text-sm">
                         {
                           qr.table
-                          ?
-                          `Table ${qr.table}`
-                          :
-                          "Main Menu QR"
+                            ?
+                            `Table ${qr.table}`
+                            :
+                            "Main Menu QR"
                         }
                       </h3>
                       <img
                         src={qr.qrDataUrl}
                         alt={
                           qr.table
-                          ?
-                          `Table ${qr.table} QR code`
-                          :
-                          "Menu QR code"
+                            ?
+                            `Table ${qr.table} QR code`
+                            :
+                            "Menu QR code"
                         }
                         className="mx-auto w-full max-w-[12rem] aspect-square object-contain rounded-xl"
                       />
@@ -2194,58 +2189,56 @@ function MenuViewer() {
     setOrderData(null)
   }, [orderStorageKey])
 
-  const subtotal = useMemo(()=>{
+  const subtotal = useMemo(() => {
 
-    if(!orderData?.items)
-      {
-        return cartItems.reduce(
-          (sum, entry)=>
-            sum + parsePrice(entry.price) * entry.qty,
-          0
-        )
-      }
+    if (!orderData?.items) {
+      return cartItems.reduce(
+        (sum, entry) =>
+          sum + parsePrice(entry.price) * entry.qty,
+        0
+      )
+    }
 
 
     // Use saved subtotal if available
-    if(orderData?.subtotal !== undefined)
+    if (orderData?.subtotal !== undefined)
       return orderData.subtotal
 
 
     // fallback for old orders
     return orderData.items.reduce(
-      (sum,entry)=>
+      (sum, entry) =>
         sum +
         parsePrice(entry.price) *
         entry.qty,
       0
     )
 
-  },[orderData, cartItems])
+  }, [orderData, cartItems])
 
 
 
-  const serviceFee = useMemo(()=>{
+  const serviceFee = useMemo(() => {
 
     // Existing orders use saved snapshot
-    if(orderData)
-    {
+    if (orderData) {
       return Number(orderData.serviceFee || 0)
     }
 
 
     // New cart calculation only
-    if(!restaurantSettings?.serviceFeeEnabled)
+    if (!restaurantSettings?.serviceFeeEnabled)
       return 0
 
 
     return subtotal *
-    (
-      Number(restaurantSettings.serviceFeePercentage || 10)
-      /100
-    )
+      (
+        Number(restaurantSettings.serviceFeePercentage || 10)
+        / 100
+      )
 
 
-  },[
+  }, [
     subtotal,
     restaurantSettings,
     orderData
@@ -2253,11 +2246,10 @@ function MenuViewer() {
 
 
 
-  const orderTotal = useMemo(()=>{
+  const orderTotal = useMemo(() => {
 
     // Existing orders use saved snapshot
-    if(orderData)
-    {
+    if (orderData) {
       return Number(orderData.totalAmount || 0)
     }
 
@@ -2265,7 +2257,7 @@ function MenuViewer() {
     return subtotal + serviceFee
 
 
-  },[
+  }, [
     orderData,
     subtotal,
     serviceFee
@@ -2289,15 +2281,11 @@ function MenuViewer() {
   }, [id])
 
   useEffect(() => {
-    let isActive = true
-    const loadRestaurantSettings = async () => {
-      if (!menuData?.restaurantId) return
-      const settings = await getRestaurantSettings(menuData.restaurantId)
-      if (!isActive) return
+    if (!menuData?.restaurantId) return
+    const unsubscribe = subscribeToRestaurantSettings(menuData.restaurantId, (settings) => {
       setRestaurantSettings(settings || { allowOnlineOrders: false })
-    }
-    loadRestaurantSettings()
-    return () => { isActive = false }
+    })
+    return () => unsubscribe()
   }, [menuData])
 
   useEffect(() => {
@@ -2379,150 +2367,150 @@ function MenuViewer() {
   }
 
   const placeOrder = async () => {
-  if (!menuData?.restaurantId || !allowOnlineOrders) return
+    if (!menuData?.restaurantId || !allowOnlineOrders) return
 
-  if (!customerName.trim()) {
-    setOrderError('Please add your name before placing the order.')
-    return
-  }
+    if (!customerName.trim()) {
+      setOrderError('Please add your name before placing the order.')
+      return
+    }
 
-  if (cartItems.length === 0) {
-    setOrderError('Add at least one item to the cart.')
-    return
-  }
+    if (cartItems.length === 0) {
+      setOrderError('Add at least one item to the cart.')
+      return
+    }
 
-  setOrderError('')
-  setIsPlacingOrder(true)
-
-
-  // calculate new order subtotal from cart
-  const newSubtotal = cartItems.reduce(
-    (sum, item) =>
-      sum + parsePrice(item.price) * item.qty,
-    0
-  )
+    setOrderError('')
+    setIsPlacingOrder(true)
 
 
-  const newServiceFee =
-    restaurantSettings?.serviceFeeEnabled
-      ? newSubtotal *
+    // calculate new order subtotal from cart
+    const newSubtotal = cartItems.reduce(
+      (sum, item) =>
+        sum + parsePrice(item.price) * item.qty,
+      0
+    )
+
+
+    const newServiceFee =
+      restaurantSettings?.serviceFeeEnabled
+        ? newSubtotal *
         (
           Number(
             restaurantSettings.serviceFeePercentage || 10
           ) / 100
         )
-      : 0
+        : 0
 
 
-  const newTotal =
-    newSubtotal + newServiceFee
-
-
-
-  const orderPayload = {
-    tableNo:
-    tableNo
-    ?
-    tableNo.replace("tableNo-","")
-    :
-    null,
-    menuId: id,
-
-    menuTitle: menuData.menuTitle,
-
-    restaurantId: menuData.restaurantId,
-
-    restaurantName: menuData.restaurantName || '',
-
-
-    currency:
-      restaurantSettings?.currency || 'USD',
-
-
-    deviceId,
-
-
-    customerName:
-      customerName.trim(),
-
-    specialNote:
-      specialNote.trim(),
-
-    subtotal: newSubtotal,
-
-
-    serviceFeeEnabled:
-      Boolean(
-        restaurantSettings?.serviceFeeEnabled
-      ),
-
-
-    serviceFeePercentage:
-      Number(
-        restaurantSettings?.serviceFeePercentage || 0
-      ),
-
-
-    serviceFee:
-      newServiceFee,
-
-
-    totalAmount:
-      newTotal,
+    const newTotal =
+      newSubtotal + newServiceFee
 
 
 
-    items: cartItems.map((entry) => ({
-      itemId: entry.itemId,
-      name: entry.name,
-      price: entry.price,
-      qty: entry.qty
-    }))
+    const orderPayload = {
+      tableNo:
+        tableNo
+          ?
+          tableNo.replace("tableNo-", "")
+          :
+          null,
+      menuId: id,
 
-  }
+      menuTitle: menuData.menuTitle,
 
+      restaurantId: menuData.restaurantId,
 
-
-  const orderId =
-    await createRestaurantOrder(
-      menuData.restaurantId,
-      orderPayload
-    )
+      restaurantName: menuData.restaurantName || '',
 
 
-  if(orderId){
+      currency:
+        restaurantSettings?.currency || 'USD',
 
-    if(orderStorageKey){
 
-      window.localStorage.setItem(
-        orderStorageKey,
-        JSON.stringify({
-          orderId,
-          restaurantId:
-            menuData.restaurantId
-        })
+      deviceId,
+
+
+      customerName:
+        customerName.trim(),
+
+      specialNote:
+        specialNote.trim(),
+
+      subtotal: newSubtotal,
+
+
+      serviceFeeEnabled:
+        Boolean(
+          restaurantSettings?.serviceFeeEnabled
+        ),
+
+
+      serviceFeePercentage:
+        Number(
+          restaurantSettings?.serviceFeePercentage || 0
+        ),
+
+
+      serviceFee:
+        newServiceFee,
+
+
+      totalAmount:
+        newTotal,
+
+
+
+      items: cartItems.map((entry) => ({
+        itemId: entry.itemId,
+        name: entry.name,
+        price: entry.price,
+        qty: entry.qty
+      }))
+
+    }
+
+
+
+    const orderId =
+      await createRestaurantOrder(
+        menuData.restaurantId,
+        orderPayload
+      )
+
+
+    if (orderId) {
+
+      if (orderStorageKey) {
+
+        window.localStorage.setItem(
+          orderStorageKey,
+          JSON.stringify({
+            orderId,
+            restaurantId:
+              menuData.restaurantId
+          })
+        )
+
+      }
+
+
+      setActiveOrderId(orderId)
+
+      setCartItems([])
+      setSpecialNote('')
+
+    }
+    else {
+
+      setOrderError(
+        'Unable to place order. Please try again.'
       )
 
     }
 
 
-    setActiveOrderId(orderId)
-
-    setCartItems([])
-    setSpecialNote('')
-
+    setIsPlacingOrder(false)
   }
-  else{
-
-    setOrderError(
-      'Unable to place order. Please try again.'
-    )
-
-  }
-
-
-  setIsPlacingOrder(false)
-}
 
 
 
@@ -2565,9 +2553,9 @@ function MenuViewer() {
         </div>
         {orderStatus && (
           <span className={`rounded-full border px-3 py-1 text-xs font-medium ${orderStatus === 'completed' ? 'border-emerald-500 bg-emerald-500 text-white'
-              : orderStatus === 'preparing' ? 'border-amber-500 bg-amber-500 text-white'
-                : orderStatus === 'confirmed' ? 'border-cyan-500 bg-cyan-500 text-white'
-                  : 'border-blue-500 bg-blue-500 text-white'
+            : orderStatus === 'preparing' ? 'border-amber-500 bg-amber-500 text-white'
+              : orderStatus === 'confirmed' ? 'border-cyan-500 bg-cyan-500 text-white'
+                : 'border-blue-500 bg-blue-500 text-white'
             }`}>
             {orderStatus === 'confirmed' ? 'Confirmed' : orderStatus === 'preparing' ? 'Preparing' : orderStatus === 'completed' ? 'Completed' : 'Pending'}
           </span>
@@ -2575,7 +2563,15 @@ function MenuViewer() {
       </div>
 
       {!allowOnlineOrders && (
-        <p className="mt-4 text-sm text-neutral-600">This restaurant is not accepting online orders at the moment.</p>
+        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <div className="flex items-center gap-2.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+            <p className="text-sm font-bold">Currently Busy</p>
+          </div>
+          <p className="mt-1 text-xs text-amber-800">
+            This restaurant is currently busy and not accepting QR orders at the moment. You can browse the menu below.
+          </p>
+        </div>
       )}
 
       {allowOnlineOrders && hasActiveOrder && orderStatus !== 'completed' && (
@@ -2664,10 +2660,10 @@ function MenuViewer() {
                 </div>
 
               </div>
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+      )}
 
       {allowOnlineOrders && ['completed', 'confirmed'].includes(orderStatus) && (
         <div className="mt-4 space-y-4">
@@ -2843,6 +2839,25 @@ function MenuViewer() {
       {/* ── Main scrollable content ─────────────────────────────── */}
       <div className="py-10 px-4 pb-28 md:pb-10">
         <div className="mx-auto flex max-w-4xl flex-col gap-6">
+          {/* Busy banner alert */}
+          {!allowOnlineOrders && (
+            <div className="rounded-2xl border border-amber-400/60 bg-amber-500/10 p-4 text-amber-900 shadow-sm sm:p-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-600">
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-base text-amber-900">Currently Busy - Orders Paused</h4>
+                  <p className="text-xs sm:text-sm mt-0.5 text-amber-800">
+                    The restaurant is currently busy and not accepting QR orders right now. You can view items, but cannot place an order.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Desktop: keep original order (order card first if active) */}
           <div className="hidden md:flex flex-col gap-6">
             {orderStatus ? (
@@ -2894,6 +2909,13 @@ function MenuViewer() {
           )}
         </div>
       </div>
+
+      {/* ── Sticky bottom notice when busy (mobile only) ── */}
+      {!allowOnlineOrders && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-amber-600 px-4 py-3 text-center text-xs font-bold text-white shadow-lg">
+          Currently Busy • QR Orders Disabled
+        </div>
+      )}
 
       {/* ── Sticky bottom cart bar (mobile only, ordering enabled) ─ */}
       {allowOnlineOrders && (
@@ -3013,13 +3035,13 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Editor />} />
-      <Route 
-      path="/menu/:id/:tableNo"
-      element={<MenuViewer />}
+      <Route
+        path="/menu/:id/:tableNo"
+        element={<MenuViewer />}
       />
-      <Route 
-      path="/menu/:id"
-      element={<MenuViewer />}
+      <Route
+        path="/menu/:id"
+        element={<MenuViewer />}
       />
     </Routes>
   )
