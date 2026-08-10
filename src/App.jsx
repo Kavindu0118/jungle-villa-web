@@ -11,6 +11,7 @@ import AnalyticsScreen from './components/screens/AnalyticsScreen'
 import MyMenuScreen from './components/screens/MyMenuScreen'
 import SettingsScreen from './components/screens/SettingsScreen'
 import ProfileScreen from './components/screens/ProfileScreen'
+import LandingPage from './components/landing/LandingPage'
 import {
   IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX, IconAnalytics
 } from './components/Icons'
@@ -1140,8 +1141,10 @@ function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, sav
     )
   }
 
-
-
+
+
+
+
 function Editor() {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
@@ -3013,14 +3016,9 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<Editor />} />
-      <Route 
-      path="/menu/:id/:tableNo"
-      element={<MenuViewer />}
-      />
-      <Route 
-      path="/menu/:id"
-      element={<MenuViewer />}
-      />
+      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/menu/:id/:tableNo" element={<MenuViewer />} />
+      <Route path="/menu/:id" element={<MenuViewer />} />
     </Routes>
   )
 }
