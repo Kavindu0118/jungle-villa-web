@@ -246,6 +246,29 @@ export const getRestaurantSettings = async (restaurantId) => {
   return null
 }
 
+export const subscribeToRestaurantSettings = (restaurantId, callback) => {
+  if (!isFirebaseConfigured || !db || !restaurantId) {
+    callback(null)
+    return () => {}
+  }
+  const docRef = doc(db, RESTAURANTS_COLLECTION, restaurantId)
+  return onSnapshot(
+    docRef,
+    (snap) => {
+      if (snap.exists()) {
+        callback({ id: snap.id, ...snap.data() })
+      } else {
+        callback(null)
+      }
+    },
+    (err) => {
+      console.error('Error listening to restaurant settings:', err)
+      callback(null)
+    }
+  )
+}
+
+
 export const saveRestaurantProfile = async (restaurantId, profileData) => {
   if (!isFirebaseConfigured || !db || !restaurantId) return false
   await setDoc(doc(db, RESTAURANTS_COLLECTION, restaurantId), {
