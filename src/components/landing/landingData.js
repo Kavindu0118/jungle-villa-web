@@ -3,7 +3,7 @@ export const navItems = [
   { id: 'how-it-works', label: 'How It Works' },
   { id: 'features', label: 'Features' },
   { id: 'packages', label: 'Packages' },
-  { id: 'why', label: 'Why Smart POS' },
+  { id: 'benefits', label: 'Why Smart POS' },
   { id: 'contact', label: 'Contact' },
 ]
 

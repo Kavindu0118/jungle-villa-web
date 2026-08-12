@@ -2,7 +2,7 @@ import { benefits } from './landingData'
 
 export default function BenefitsSection() {
   return (
-    <section className="bg-slate-100 text-slate-950">
+    <section id="benefits" className="bg-slate-100 text-slate-950">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.28em] text-emerald-500">Why Restaurants Choose Smart POS</p>
