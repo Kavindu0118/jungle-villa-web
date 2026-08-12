@@ -1,6 +1,5 @@
 import LandingNavbar from './LandingNavbar'
 import HeroSection from './HeroSection'
-import TrustSection from './TrustSection'
 import OrderingChannels from './OrderingChannels'
 import HowItWorks from './HowItWorks'
 import FeaturesSection from './FeaturesSection'
@@ -19,7 +18,6 @@ export default function LandingPage() {
       <LandingNavbar />
       <main>
         <HeroSection />
-        <TrustSection />
         <OrderingChannels />
         <HowItWorks />
         <FeaturesSection />

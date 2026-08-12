@@ -1,4 +1,28 @@
+import { useState } from "react";
+
+const whatsappNumber = "94764549169";
+
 export default function ContactSection() {
+  const [name, setName] = useState("");
+  const [business, setBusiness] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    const whatsappText = `Hello, my name is ${name || "[No name]"}. ` +
+      `Restaurant / Business: ${business || "[No business name]"}. ` +
+      `Phone: ${phone || "[No phone]"}. ` +
+      `Email: ${email || "[No email]"}. ` +
+      `Message: ${message || "[No message]"}.`;
+
+    const encodedText = encodeURIComponent(whatsappText);
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedText}`;
+
+    window.open(whatsappUrl, "_blank");
+  };
   return (
     <section id="contact" className="bg-slate-950 text-white">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -20,31 +44,61 @@ export default function ContactSection() {
             </div>
           </div>
 
-          <form className="rounded-[1.75rem] border border-white/10 bg-slate-900/90 p-8 shadow-2xl shadow-slate-950/30">
+          <form onSubmit={handleSubmit} className="rounded-[1.75rem] border border-white/10 bg-slate-900/90 p-8 shadow-2xl shadow-slate-950/30">
             <div className="grid gap-4">
               <label className="space-y-2 text-sm text-slate-300">
                 <span>Name</span>
-                <input type="text" placeholder="Your name" className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500" />
+                <input
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500"
+                />
               </label>
               <label className="space-y-2 text-sm text-slate-300">
                 <span>Restaurant / Business Name</span>
-                <input type="text" placeholder="Restaurant name" className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500" />
+                <input
+                  type="text"
+                  placeholder="Restaurant name"
+                  value={business}
+                  onChange={(event) => setBusiness(event.target.value)}
+                  className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500"
+                />
               </label>
               <label className="space-y-2 text-sm text-slate-300">
                 <span>Phone Number</span>
-                <input type="tel" placeholder="e.g. +94 76 454 9169" className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500" />
+                <input
+                  type="tel"
+                  placeholder="e.g. +94 76 454 9169"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500"
+                />
               </label>
               <label className="space-y-2 text-sm text-slate-300">
                 <span>Email</span>
-                <input type="email" placeholder="email@domain.com" className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500" />
+                <input
+                  type="email"
+                  placeholder="email@domain.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500"
+                />
               </label>
               <label className="space-y-2 text-sm text-slate-300">
                 <span>Message</span>
-                <textarea rows="4" placeholder="Tell us about your restaurant" className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500" />
+                <textarea
+                  rows="4"
+                  placeholder="Tell us about your restaurant"
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  className="w-full rounded-3xl border border-slate-700 bg-slate-950 px-4 py-3 text-slate-100 outline-none transition focus:border-emerald-500"
+                />
               </label>
             </div>
             <p className="mt-4 text-xs leading-5 text-slate-500">TODO: connect this form to your demo request backend or email service.</p>
-            <button type="button" className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400">
+            <button type="submit" className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-emerald-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-400">
               Request Demo
             </button>
           </form>
