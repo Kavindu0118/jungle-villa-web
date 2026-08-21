@@ -8,12 +8,13 @@ import { jsPDF } from 'jspdf'
 import { cloneTemplate, findTemplateById, menuTemplates } from './data/menuTemplates'
 import DashboardScreen from './components/screens/DashboardScreen'
 import AnalyticsScreen from './components/screens/AnalyticsScreen'
+import InventoryScreen from './components/screens/InventoryScreen'
 import MyMenuScreen from './components/screens/MyMenuScreen'
 import SettingsScreen from './components/screens/SettingsScreen'
 import ProfileScreen from './components/screens/ProfileScreen'
 import LandingPage from './components/landing/LandingPage'
 import {
-  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX, IconAnalytics
+  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX, IconAnalytics, IconInventory
 } from './components/Icons'
 import {
   saveMenuRecord,
@@ -1888,6 +1889,7 @@ function Editor() {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard /> },
     { id: 'analytics', label: 'Analytics', icon: <IconAnalytics /> },
+    { id: 'inventory', label: 'Bar Inventory', icon: <IconInventory /> },
     { id: 'my-menu', label: 'My Menu', icon: <IconMenu /> },
     { id: 'settings', label: 'Settings', icon: <IconSettings /> },
     { id: 'profile', label: 'Profile', icon: <IconProfile /> },
@@ -1981,6 +1983,18 @@ function Editor() {
               openMenuPreview={openMenuPreview}
               openQrPreview={openQrPreview}
             />}
+            {activeSection === 'analytics' && <AnalyticsScreen
+              profile={profile}
+              restaurantSettings={restaurantSettings}
+              setActiveSection={setActiveSection}
+            />}
+            {activeSection === 'inventory' && <InventoryScreen
+              profile={profile}
+              restaurantSettings={restaurantSettings}
+              setActiveSection={setActiveSection}
+              user={user}
+              savedMenus={savedMenus}
+            />}
             {activeSection === 'my-menu' && <MyMenuScreen
               savedMenus={savedMenus}
               openNewMenuBuilder={openNewMenuBuilder}
@@ -1991,11 +2005,6 @@ function Editor() {
               setDeleteConfirmId={setDeleteConfirmId}
               handleDeleteMenu={handleDeleteMenu}
               isDeletingMenu={isDeletingMenu}
-            />}
-            {activeSection === 'analytics' && <AnalyticsScreen
-              profile={profile}
-              restaurantSettings={restaurantSettings}
-              setActiveSection={setActiveSection}
             />}
             {activeSection === 'settings' && <SettingsScreen
               restaurantSettings={restaurantSettings}
