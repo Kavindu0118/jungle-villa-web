@@ -53,23 +53,16 @@ export default function LoginModal({ user, onComplete }) {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.55)' }}>
         <div className="w-full max-w-md rounded-3xl bg-white p-10 text-center shadow-2xl">
           {/* Logo / Icon */}
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl" style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}>
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <rect x="2" y="2" width="13" height="13" rx="2" fill="white"/>
-              <rect x="17" y="2" width="13" height="13" rx="2" fill="white" fillOpacity="0.7"/>
-              <rect x="2" y="17" width="13" height="13" rx="2" fill="white" fillOpacity="0.7"/>
-              <rect x="19" y="19" width="4" height="4" rx="1" fill="white"/>
-              <rect x="25" y="19" width="5" height="4" rx="1" fill="white"/>
-              <rect x="19" y="25" width="11" height="5" rx="1" fill="white"/>
-            </svg>
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-neutral-100 shadow-md">
+            <img src="/assets/appicon.jpeg" alt="Smart POS" className="h-full w-full object-cover" />
           </div>
 
           <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#16a34a', letterSpacing: '0.15em' }}>
             Welcome to
           </p>
-          <h2 className="mt-2 text-3xl font-bold text-neutral-900">QR Menu Studio</h2>
+          <h2 className="mt-2 text-3xl font-bold text-neutral-900">Smart POS</h2>
           <p className="mt-3 text-sm leading-relaxed text-neutral-500">
-            Create, manage, and publish your restaurant menus — then share instantly with a QR code.
+            Smart POS & Restaurant Management — manage orders, POS billing, inventory, and digital menus seamlessly.
           </p>
 
           <button

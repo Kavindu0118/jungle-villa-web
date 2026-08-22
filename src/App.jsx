@@ -1,6 +1,6 @@
 import LoginModal from "./LoginModal";
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Routes, Route, useParams } from 'react-router-dom'
+import { Routes, Route, useParams, useSearchParams } from 'react-router-dom'
 import { auth, signInWithGoogle, logoutUser } from './lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import QRCode from 'qrcode'
@@ -1201,15 +1201,15 @@ function Editor() {
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(14)
       doc.setTextColor(115, 115, 115)
-      const menuTitle = qrPreview.menuTitle || 'Digital Menu'
+      const menuTitle = qr.room ? 'Room Service Menu' : (qrPreview.menuTitle || 'Digital Menu')
       doc.text(menuTitle, pageWidth / 2, 44, { align: 'center' })
 
-      // Table indicator / QR code title
+      // Table/Room indicator / QR code title
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(32)
       doc.setTextColor(22, 163, 74) // brand green: #16a34a
-      const tableText = qr.table ? `TABLE ${qr.table}` : 'MAIN MENU'
-      doc.text(tableText, pageWidth / 2, 95, { align: 'center' })
+      const indicatorText = qr.room ? `ROOM ${qr.room}` : qr.table ? `TABLE ${qr.table}` : 'MAIN MENU'
+      doc.text(indicatorText, pageWidth / 2, 95, { align: 'center' })
 
       // QR Code Box
       const qrSize = 100 // 100mm
@@ -1230,12 +1230,19 @@ function Editor() {
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(16)
       doc.setTextColor(18, 18, 18)
-      doc.text('SCAN THE QR CODE', pageWidth / 2, 245, { align: 'center' })
+      doc.text(qr.room ? 'SCAN FOR ROOM SERVICE' : 'SCAN THE QR CODE', pageWidth / 2, 245, { align: 'center' })
 
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(11)
       doc.setTextColor(82, 82, 82)
-      doc.text('Scan with your smartphone camera to view the menu & place your order.', pageWidth / 2, 253, { align: 'center' })
+      doc.text(
+        qr.room
+          ? 'Scan with your smartphone camera to view menu & order to your room.'
+          : 'Scan with your smartphone camera to view the menu & place your order.',
+        pageWidth / 2,
+        253,
+        { align: 'center' }
+      )
 
       // URL at the bottom
       doc.setFont('courier', 'normal')
@@ -1244,9 +1251,11 @@ function Editor() {
       doc.text(qr.url, pageWidth / 2, 275, { align: 'center' })
 
       // Save PDF
-      const filename = qr.table
-        ? `${restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-table-${qr.table}.pdf`
-        : `${restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-menu.pdf`
+      const filename = qr.room
+        ? `${restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-room-${qr.room}.pdf`
+        : qr.table
+          ? `${restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-table-${qr.table}.pdf`
+          : `${restaurantName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-menu.pdf`
       doc.save(filename)
     } catch (err) {
       console.error('Failed to generate PDF: ', err)
@@ -1258,6 +1267,8 @@ function Editor() {
   const [restaurantSettings, setRestaurantSettings] = useState(null)
   const [tableTrackingEnabled, setTableTrackingEnabled] = useState(false)
   const [tableCount, setTableCount] = useState(0)
+  const [roomOrderingEnabled, setRoomOrderingEnabled] = useState(false)
+  const [rooms, setRooms] = useState([])
   const [isRestaurantLoading, setIsRestaurantLoading] = useState(false)
   const [isRestaurantUpdating, setIsRestaurantUpdating] = useState(false)
   const restaurantId = profile?.restaurantId || null
@@ -1369,6 +1380,12 @@ function Editor() {
         setTableCount(
           Number(settings.tableCount || 0)
         )
+        setRoomOrderingEnabled(
+          Boolean(settings.roomOrderingEnabled)
+        )
+        setRooms(
+          Array.isArray(settings.rooms) ? settings.rooms : []
+        )
       } else {
         const defaults = {
           name: '',
@@ -1379,8 +1396,9 @@ function Editor() {
           serviceFeeEnabled: false,
           serviceFeePercentage: 10,
           tableTrackingEnabled: false,
-          tableCount: 0
-
+          tableCount: 0,
+          roomOrderingEnabled: false,
+          rooms: [],
         }
         setRestaurantSettings(defaults)
         await saveRestaurantSettings(restaurantId, defaults)
@@ -1458,6 +1476,18 @@ function Editor() {
     await saveRestaurantSettings(restaurantId, { ...restaurantSettings, allowOnlineOrders: nextValue })
     setIsRestaurantUpdating(false)
   }
+  const handleToggleBarInventory = async () => {
+    if (!restaurantId || !restaurantSettings) return
+    const nextValue = !restaurantSettings.enableBarInventory
+    const updated = { ...restaurantSettings, enableBarInventory: nextValue }
+    setRestaurantSettings(updated)
+    if (!nextValue && activeSection === 'inventory') {
+      setActiveSection('dashboard')
+    }
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, updated)
+    setIsRestaurantUpdating(false)
+  }
   const handleToggleTableTracking = async () => {
     if (!restaurantId || !restaurantSettings)
       return
@@ -1490,6 +1520,33 @@ function Editor() {
       restaurantId,
       updated
     )
+  }
+  const handleToggleRoomOrdering = async () => {
+    if (!restaurantId || !restaurantSettings) return
+    const next = !roomOrderingEnabled
+    setRoomOrderingEnabled(next)
+    const updated = {
+      ...restaurantSettings,
+      roomOrderingEnabled: next,
+      rooms: next ? rooms : (restaurantSettings.rooms || [])
+    }
+    setRestaurantSettings(updated)
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, updated)
+    setIsRestaurantUpdating(false)
+  }
+  const handleSaveRooms = async (updatedRooms) => {
+    if (!restaurantId || !restaurantSettings) return
+    setRooms(updatedRooms)
+    const updated = {
+      ...restaurantSettings,
+      roomOrderingEnabled: true,
+      rooms: updatedRooms
+    }
+    setRestaurantSettings(updated)
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, updated)
+    setIsRestaurantUpdating(false)
   }
   const handleCurrencyChange = async (newCurrency) => {
     if (!restaurantId || !restaurantSettings) return
@@ -1797,37 +1854,51 @@ function Editor() {
     setShowBuilder(false)
   }
   const openQrPreview = async (menu) => {
-    const slug =
-      menu.remoteId || menu.slug
+    const slug = menu.remoteId || menu.slug
     let qrList = []
-    if (restaurantSettings?.tableTrackingEnabled) {
-      for (
-        let i = 1;
-        i <= restaurantSettings.tableCount;
-        i++
-      ) {
+
+    // 1. Always include Main Menu QR
+    qrList.push({
+      type: 'main',
+      table: null,
+      room: null,
+      label: 'Main Menu QR',
+      url: `${window.location.origin}/menu/${slug}`
+    })
+
+    // 2. Table QR codes if table tracking is enabled
+    if (restaurantSettings?.tableTrackingEnabled && restaurantSettings.tableCount > 0) {
+      for (let i = 1; i <= restaurantSettings.tableCount; i++) {
         qrList.push({
+          type: 'table',
           table: i,
-          url:
-            `${window.location.origin}/menu/${slug}/tableNo-${i}`
+          room: null,
+          label: `Table ${i}`,
+          url: `${window.location.origin}/menu/${slug}/tableNo-${i}`
         })
       }
     }
-    else {
-      qrList.push({
-        table: null,
-        url:
-          `${window.location.origin}/menu/${slug}`
+
+    // 3. Room Service QR codes if room ordering is enabled
+    if (restaurantSettings?.roomOrderingEnabled && Array.isArray(restaurantSettings.rooms) && restaurantSettings.rooms.length > 0) {
+      restaurantSettings.rooms.forEach((rm) => {
+        qrList.push({
+          type: 'room',
+          table: null,
+          room: rm.number,
+          token: rm.token,
+          label: `Room ${rm.number}`,
+          url: `${window.location.origin}/menu/${slug}?rk=${rm.token}`
+        })
       })
     }
-    const generated =
-      await Promise.all(
-        qrList.map(async (q) => ({
-          ...q,
-          qrDataUrl:
-            await QRCode.toDataURL(q.url)
-        }))
-      )
+
+    const generated = await Promise.all(
+      qrList.map(async (q) => ({
+        ...q,
+        qrDataUrl: await QRCode.toDataURL(q.url, { width: 320, margin: 1, color: { dark: '#101010', light: '#ffffff' } })
+      }))
+    )
     setQrPreview({
       menuTitle: menu.menuTitle,
       restaurantName: menu.restaurantName,
@@ -1889,7 +1960,7 @@ function Editor() {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <IconDashboard /> },
     { id: 'analytics', label: 'Analytics', icon: <IconAnalytics /> },
-    { id: 'inventory', label: 'Bar Inventory', icon: <IconInventory /> },
+    ...(restaurantSettings?.enableBarInventory ? [{ id: 'inventory', label: 'Bar Inventory', icon: <IconInventory /> }] : []),
     { id: 'my-menu', label: 'My Menu', icon: <IconMenu /> },
     { id: 'settings', label: 'Settings', icon: <IconSettings /> },
     { id: 'profile', label: 'Profile', icon: <IconProfile /> },
@@ -1911,20 +1982,12 @@ function Editor() {
       <aside className="sidebar">
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-6 border-b" style={{ borderColor: '#dcfce7' }}>
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl"
-            style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}>
-            <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
-              <rect x="2" y="2" width="12" height="12" rx="2" fill="white" />
-              <rect x="18" y="2" width="12" height="12" rx="2" fill="white" fillOpacity="0.7" />
-              <rect x="2" y="18" width="12" height="12" rx="2" fill="white" fillOpacity="0.7" />
-              <rect x="20" y="20" width="4" height="4" rx="1" fill="white" />
-              <rect x="26" y="20" width="4" height="4" rx="1" fill="white" />
-              <rect x="20" y="26" width="10" height="4" rx="1" fill="white" />
-            </svg>
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-neutral-100 shadow-sm">
+            <img src="/assets/appicon.jpeg" alt="Smart POS Logo" className="h-full w-full object-cover" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-neutral-900 leading-tight">{restaurantSettings?.name || 'QR Menu Studio'}</p>
-            <p className="text-xs text-neutral-400 truncate">QR Menu Studio</p>
+            <p className="text-sm font-bold text-neutral-900 leading-tight">{restaurantSettings?.name || 'Smart POS'}</p>
+            <p className="text-xs text-neutral-400 truncate">Smart POS Dashboard</p>
           </div>
         </div>
 
@@ -1988,7 +2051,7 @@ function Editor() {
               restaurantSettings={restaurantSettings}
               setActiveSection={setActiveSection}
             />}
-            {activeSection === 'inventory' && <InventoryScreen
+            {activeSection === 'inventory' && restaurantSettings?.enableBarInventory && <InventoryScreen
               profile={profile}
               restaurantSettings={restaurantSettings}
               setActiveSection={setActiveSection}
@@ -2012,6 +2075,7 @@ function Editor() {
               isRestaurantLoading={isRestaurantLoading}
               isRestaurantUpdating={isRestaurantUpdating}
               handleToggleOnlineOrders={handleToggleOnlineOrders}
+              handleToggleBarInventory={handleToggleBarInventory}
               handleCurrencyChange={handleCurrencyChange}
               handleRestaurantNameChange={handleRestaurantNameChange}
               handleRestaurantAddressChange={handleRestaurantAddressChange}
@@ -2030,6 +2094,10 @@ function Editor() {
               handleTableCountChange={
                 handleTableCountChange
               }
+              roomOrderingEnabled={roomOrderingEnabled}
+              rooms={rooms}
+              handleToggleRoomOrdering={handleToggleRoomOrdering}
+              handleSaveRooms={handleSaveRooms}
               handleUpdateBackupDatabase={handleUpdateBackupDatabase}
               waiterCodes={waiterCodes}
               isWaiterCodesLoading={isWaiterCodesLoading}
@@ -2057,45 +2125,39 @@ function Editor() {
       {/* QR Preview Modal */}
       {qrPreview && (
         <div className="modal-overlay" onClick={closeQrPreview} role="dialog" aria-modal="true" aria-label="QR preview">
-          <div className="modal-panel max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="flex items-start justify-between gap-3 mb-5">
-                <div>
-                  <p className="text-lg font-bold text-neutral-900">{qrPreview.menuTitle}</p>
-                  <p className="text-sm text-neutral-500">{qrPreview.restaurantName || 'Untitled Restaurant'}</p>
-                </div>
-                <button onClick={closeQrPreview} className="btn-ghost p-2 flex-shrink-0"><IconX /></button>
+          <div className="modal-panel max-w-3xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-neutral-100 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-lg font-bold text-neutral-900">{qrPreview.menuTitle}</p>
+                <p className="text-sm text-neutral-500">{qrPreview.restaurantName || 'Untitled Restaurant'} • {qrPreview.qrs?.length || 0} QR Code(s)</p>
               </div>
-              <div className="flex flex-wrap gap-6 justify-center rounded-2xl border p-6" style={{ background: '#f8f8f8', borderColor: '#e5e7eb' }}>
+              <button onClick={closeQrPreview} className="btn-ghost p-2 flex-shrink-0"><IconX /></button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[75vh]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 justify-items-center">
                 {
                   qrPreview.qrs?.map((qr) => (
                     <div
                       key={qr.url}
-                      className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm text-center flex flex-col items-center justify-between w-full max-w-[16rem]"
+                      className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm text-center flex flex-col items-center justify-between w-full"
                     >
-                      <h3 className="mb-3 font-bold text-neutral-900 text-sm">
-                        {
-                          qr.table
-                            ?
-                            `Table ${qr.table}`
-                            :
-                            "Main Menu QR"
-                        }
-                      </h3>
+                      <div className="mb-2">
+                        <span className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-full mb-1 ${qr.room ? 'bg-emerald-100 text-emerald-800' : qr.table ? 'bg-green-100 text-green-800' : 'bg-neutral-100 text-neutral-700'}`}>
+                          {qr.room ? '🛏️ Room Service' : qr.table ? '🍽️ Dine-in Table' : '📖 General Menu'}
+                        </span>
+                        <h3 className="font-bold text-neutral-900 text-sm">
+                          {qr.room ? `Room ${qr.room}` : qr.table ? `Table ${qr.table}` : "Main Menu QR"}
+                        </h3>
+                      </div>
                       <img
                         src={qr.qrDataUrl}
-                        alt={
-                          qr.table
-                            ?
-                            `Table ${qr.table} QR code`
-                            :
-                            "Menu QR code"
-                        }
-                        className="mx-auto w-full max-w-[12rem] aspect-square object-contain rounded-xl"
+                        alt={qr.room ? `Room ${qr.room} QR code` : qr.table ? `Table ${qr.table} QR code` : "Menu QR code"}
+                        className="mx-auto w-full max-w-[10rem] aspect-square object-contain rounded-xl border border-neutral-100 p-1"
                       />
 
                       {/* Action buttons (Copy and Download) */}
-                      <div className="flex items-center justify-center gap-2 mt-4">
+                      <div className="flex items-center justify-center gap-2 mt-3">
                         <button
                           type="button"
                           onClick={() => handleCopyLink(qr.url)}
@@ -2127,14 +2189,13 @@ function Editor() {
                         </button>
                       </div>
 
-                      <p className="mt-3 break-all text-[11px] text-neutral-400 font-mono">
+                      <p className="mt-2 break-all text-[10px] text-neutral-400 font-mono line-clamp-1" title={qr.url}>
                         {qr.url}
                       </p>
                     </div>
                   ))
                 }
               </div>
-              <p className="mt-3 text-center text-xs text-neutral-400">Scan this QR code to open the menu</p>
             </div>
           </div>
         </div>
@@ -2160,6 +2221,9 @@ const getCurrencySymbol = (priceStr) => {
 // ─── MenuViewer ───────────────────────────────────────────────────────────────
 function MenuViewer() {
   const { id, tableNo } = useParams()
+  const [searchParams] = useSearchParams()
+  const roomKeyParam = searchParams.get('rk') || (tableNo && tableNo.startsWith('room-') ? tableNo.replace('room-', '') : null)
+
   const [menuData, setMenuData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [restaurantSettings, setRestaurantSettings] = useState(null)
@@ -2174,6 +2238,22 @@ function MenuViewer() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [deviceId] = useState(() => getDeviceId())
   const [showCartDrawer, setShowCartDrawer] = useState(false)
+
+  // Resolve room or table location
+  const activeLocation = useMemo(() => {
+    if (roomKeyParam && restaurantSettings?.rooms) {
+      const matched = restaurantSettings.rooms.find(
+        (r) => r.token && r.token.toLowerCase() === roomKeyParam.toLowerCase()
+      )
+      if (matched) {
+        return { type: 'room', roomNumber: matched.number, token: roomKeyParam }
+      }
+    }
+    if (tableNo && tableNo.startsWith('tableNo-')) {
+      return { type: 'table', tableNumber: tableNo.replace('tableNo-', '') }
+    }
+    return null
+  }, [roomKeyParam, tableNo, restaurantSettings?.rooms])
 
   const orderStorageKey = id ? `qr-order-${id}` : null
   const historyStorageKey = id ? `qr-order-history-${id}` : null
@@ -2340,6 +2420,8 @@ function MenuViewer() {
           totalAmount: Number(orderData.totalAmount || 0),
           currency: orderData.currency || 'USD',
           tableNo: orderData.tableNo || null,
+          roomNo: orderData.roomNo || null,
+          orderType: orderData.orderType || (orderData.roomNo ? 'room' : orderData.tableNo ? 'table' : 'online'),
         }
         const updated = [newEntry, ...prevHistory]
         window.localStorage.setItem(historyStorageKey, JSON.stringify(updated))
@@ -2392,14 +2474,12 @@ function MenuViewer() {
     setOrderError('')
     setIsPlacingOrder(true)
 
-
     // calculate new order subtotal from cart
     const newSubtotal = cartItems.reduce(
       (sum, item) =>
         sum + parsePrice(item.price) * item.qty,
       0
     )
-
 
     const newServiceFee =
       restaurantSettings?.serviceFeeEnabled
@@ -2411,72 +2491,47 @@ function MenuViewer() {
         )
         : 0
 
-
     const newTotal =
       newSubtotal + newServiceFee
 
-
+    const resolvedTableNo = activeLocation?.type === 'table' ? activeLocation.tableNumber : (tableNo && tableNo.startsWith('tableNo-') ? tableNo.replace("tableNo-", "") : null)
+    const resolvedRoomNo = activeLocation?.type === 'room' ? activeLocation.roomNumber : null
 
     const orderPayload = {
-      tableNo:
-        tableNo
-          ?
-          tableNo.replace("tableNo-", "")
-          :
-          null,
+      orderType: activeLocation?.type || (resolvedTableNo ? 'table' : 'online'),
+      tableNo: resolvedTableNo,
+      roomNo: resolvedRoomNo,
+      location: activeLocation || (resolvedTableNo ? { type: 'table', tableNumber: resolvedTableNo } : null),
       menuId: id,
-
       menuTitle: menuData.menuTitle,
-
       restaurantId: menuData.restaurantId,
-
       restaurantName: menuData.restaurantName || '',
-
-
       currency:
         restaurantSettings?.currency || 'USD',
-
-
       deviceId,
-
-
       customerName:
         customerName.trim(),
-
       specialNote:
         specialNote.trim(),
-
       subtotal: newSubtotal,
-
-
       serviceFeeEnabled:
         Boolean(
           restaurantSettings?.serviceFeeEnabled
         ),
-
-
       serviceFeePercentage:
         Number(
           restaurantSettings?.serviceFeePercentage || 0
         ),
-
-
       serviceFee:
         newServiceFee,
-
-
       totalAmount:
         newTotal,
-
-
-
       items: cartItems.map((entry) => ({
         itemId: entry.itemId,
         name: entry.name,
         price: entry.price,
         qty: entry.qty
       }))
-
     }
 
 
@@ -2557,9 +2612,21 @@ function MenuViewer() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-500">Order</p>
-          <h3 className="mt-2 text-xl font-semibold text-neutral-900">
-            {orderStatus ? 'Your order' : 'Your cart'}
-          </h3>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <h3 className="text-xl font-semibold text-neutral-900">
+              {orderStatus ? 'Your order' : 'Your cart'}
+            </h3>
+            {activeLocation?.type === 'room' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+                🛏️ Room {activeLocation.roomNumber}
+              </span>
+            )}
+            {activeLocation?.type === 'table' && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-bold text-green-800">
+                🍽️ Table {activeLocation.tableNumber}
+              </span>
+            )}
+          </div>
         </div>
         {orderStatus && (
           <span className={`rounded-full border px-3 py-1 text-xs font-medium ${orderStatus === 'completed' ? 'border-emerald-500 bg-emerald-500 text-white'
@@ -2898,7 +2965,7 @@ function MenuViewer() {
                       <div>
                         <p className="font-semibold text-neutral-800">
                           Order #{historyOrder.orderId.slice(-6).toUpperCase()}
-                          {historyOrder.tableNo && ` (Table ${historyOrder.tableNo})`}
+                          {historyOrder.roomNo ? ` (Room ${historyOrder.roomNo})` : historyOrder.tableNo ? ` (Table ${historyOrder.tableNo})` : ''}
                         </p>
                         <p className="text-xs text-neutral-500 mt-0.5">{historyOrder.dateTime}</p>
                       </div>

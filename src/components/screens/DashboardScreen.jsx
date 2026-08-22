@@ -18,12 +18,12 @@ export default function DashboardScreen({
       <div className="relative overflow-hidden rounded-2xl p-7" style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 60%, #166534 100%)' }}>
         <div className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }} />
         <div className="pointer-events-none absolute -bottom-8 -left-8 h-36 w-36 rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
-        <p className="font-mono text-xs uppercase tracking-widest text-green-200">Restaurant Menu Studio</p>
+        <p className="font-mono text-xs uppercase tracking-widest text-green-200">Smart POS Dashboard</p>
         <h1 className="mt-3 text-3xl font-bold text-white">
-          {restaurantSettings?.name ? `Welcome back, ${restaurantSettings.name}!` : 'Welcome to QR Menu Studio'}
+          {restaurantSettings?.name ? `Welcome back, ${restaurantSettings.name}!` : 'Welcome to Smart POS Dashboard'}
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-green-100 max-w-xl">
-          Build and publish your restaurant menus, generate QR codes, and let customers order directly from their phones.
+          Manage your orders, point of sale, inventory, and menus all in one centralized smart dashboard.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <button

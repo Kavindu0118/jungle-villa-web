@@ -215,6 +215,24 @@ export const createRestaurantForUser = async (uid, profileData) => {
     updatedAt: serverTimestamp(),
   })
 
+  // Create default subscription record
+  try {
+    const subRef = doc(db, 'subscriptions', restaurantRef.id)
+    await setDoc(subRef, {
+      restaurantId: restaurantRef.id,
+      userId: uid,
+      subscriptionType: '',
+      monthlyCharge: '',
+      status: 'Inactive',
+      subscribedDate: '',
+      nextRenewalDate: '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  } catch (subErr) {
+    console.error('Error creating initial subscription record:', subErr)
+  }
+
   await setDoc(doc(db, USERS_COLLECTION, uid), {
     ownerName,
     email,
@@ -227,6 +245,47 @@ export const createRestaurantForUser = async (uid, profileData) => {
     email,
     restaurantId: restaurantRef.id,
   }
+}
+
+export const getOrCreateSubscription = async (restaurantId, userId = '') => {
+  if (!isFirebaseConfigured || !db || !restaurantId) return null
+  try {
+    const subRef = doc(db, 'subscriptions', restaurantId)
+    const snap = await getDoc(subRef)
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() }
+    }
+    const initialData = {
+      restaurantId,
+      userId: userId || '',
+      subscriptionType: '',
+      monthlyCharge: '',
+      status: 'Inactive',
+      subscribedDate: '',
+      nextRenewalDate: '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
+    await setDoc(subRef, initialData)
+    return { id: restaurantId, ...initialData }
+  } catch (error) {
+    console.error('Error in getOrCreateSubscription:', error)
+    return null
+  }
+}
+
+export const subscribeToSubscription = (restaurantId, onUpdate) => {
+  if (!isFirebaseConfigured || !db || !restaurantId) return () => {}
+  const subRef = doc(db, 'subscriptions', restaurantId)
+  return onSnapshot(subRef, (snap) => {
+    if (snap.exists()) {
+      onUpdate({ id: snap.id, ...snap.data() })
+    } else {
+      onUpdate(null)
+    }
+  }, (err) => {
+    console.error('Error listening to subscription:', err)
+  })
 }
 
 export const saveUserProfile = async (uid, profileData) => {

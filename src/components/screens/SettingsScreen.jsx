@@ -10,6 +10,7 @@ export default function SettingsScreen({
   isRestaurantLoading,
   isRestaurantUpdating,
   handleToggleOnlineOrders,
+  handleToggleBarInventory,
   handleToggleServiceFee,
   handleServiceFeePercentageChange,
   handleCurrencyChange,
@@ -24,6 +25,10 @@ export default function SettingsScreen({
   tableCount,
   handleToggleTableTracking,
   handleTableCountChange,
+  roomOrderingEnabled = false,
+  rooms = [],
+  handleToggleRoomOrdering,
+  handleSaveRooms,
   handleUpdateBackupDatabase,
   waiterCodes = [],
   isWaiterCodesLoading = false,
@@ -46,6 +51,47 @@ export default function SettingsScreen({
   const [tempWebsite, setTempWebsite] = useState(restaurantSettings?.website || '')
 
   const [newCode, setNewCode] = useState('')
+  const [newRoomInput, setNewRoomInput] = useState('')
+
+  const generateRoomToken = () => {
+    const chars = '23456789abcdefghjkmnpqrstuvwxyz'
+    let token = ''
+    for (let i = 0; i < 8; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return token
+  }
+
+  const handleAddRoomsFromInput = async (e) => {
+    e?.preventDefault()
+    if (!newRoomInput.trim() || !handleSaveRooms) return
+    const rawTokens = newRoomInput.split(/[\n,]+/).map(r => r.trim()).filter(Boolean)
+    if (rawTokens.length === 0) return
+
+    const currentRooms = Array.isArray(rooms) ? [...rooms] : []
+    const updated = [...currentRooms]
+
+    for (const num of rawTokens) {
+      if (!updated.some(r => r.number?.toLowerCase() === num.toLowerCase())) {
+        updated.push({
+          id: `room_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          number: num,
+          token: generateRoomToken(),
+          createdAt: new Date().toISOString()
+        })
+      }
+    }
+
+    await handleSaveRooms(updated)
+    setNewRoomInput('')
+  }
+
+  const handleDeleteRoomItem = async (roomId) => {
+    if (!handleSaveRooms) return
+    const currentRooms = Array.isArray(rooms) ? rooms : []
+    const updated = currentRooms.filter(r => r.id !== roomId && r.number !== roomId)
+    await handleSaveRooms(updated)
+  }
 
   const handleAddCode = async () => {
     const trimmed = newCode.trim()
@@ -337,6 +383,128 @@ export default function SettingsScreen({
             />
           </div>
         )}
+      </div>
+
+      {/* Room Service Ordering */}
+      <div className="card p-5 mb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-neutral-900">Room Service Ordering</h3>
+              <span className="rounded-md bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700 border border-green-200">Hotel & Rooms</span>
+            </div>
+            <p className="text-sm text-neutral-500 mt-1">
+              Allow guests to scan secure QR codes from their hotel rooms to place room service orders.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleRoomOrdering}
+            disabled={isRestaurantLoading || isRestaurantUpdating}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${roomOrderingEnabled ? 'bg-green-600' : 'bg-neutral-300'}`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${roomOrderingEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+            />
+          </button>
+        </div>
+
+        {roomOrderingEnabled && (
+          <div className="mt-5 border-t border-neutral-100 pt-4 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 mb-1.5">
+                Add Room Numbers (Single or comma-separated)
+              </label>
+              <form onSubmit={handleAddRoomsFromInput} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newRoomInput}
+                  onChange={(e) => setNewRoomInput(e.target.value)}
+                  placeholder="e.g. 101, 102, 103, 201, Penthouse"
+                  className="input-field flex-1 text-sm"
+                  disabled={isRestaurantUpdating}
+                />
+                <button
+                  type="submit"
+                  disabled={isRestaurantUpdating || !newRoomInput.trim()}
+                  className="btn-green text-xs px-4 py-2 flex-shrink-0"
+                >
+                  + Add Room(s)
+                </button>
+              </form>
+              <p className="mt-1 text-xs text-neutral-400">
+                Each room automatically receives an unguessable security token to prevent unauthorized room changes.
+              </p>
+            </div>
+
+            {/* Room List */}
+            {rooms && rooms.length > 0 ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-neutral-500 uppercase tracking-wider px-1">
+                  <span>Configured Rooms ({rooms.length})</span>
+                  <span>Security Token</span>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
+                  {rooms.map((rm) => (
+                    <div
+                      key={rm.id || rm.number}
+                      className="flex items-center justify-between rounded-xl border border-neutral-200 bg-neutral-50/60 px-3.5 py-2.5 text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-100 font-bold text-green-800 text-xs">
+                          🛏️
+                        </span>
+                        <span className="font-semibold text-neutral-900">Room {rm.number}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs text-neutral-400 bg-white px-2 py-0.5 rounded border border-neutral-200" title="Cryptographic Room Token">
+                          rk_{rm.token}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRoomItem(rm.id || rm.number)}
+                          disabled={isRestaurantUpdating}
+                          className="text-neutral-400 hover:text-red-600 transition p-1"
+                          title="Remove Room"
+                        >
+                          <IconTrash />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50 p-4 text-center text-xs text-neutral-500">
+                No rooms added yet. Enter room numbers above to generate room QR codes.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Bar Inventory Feature */}
+      <div className="card p-5 mb-4">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#16a34a' }}>Modules & Inventory</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-neutral-900">Bar Inventory Management</p>
+              <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500">Disabled</span>
+            </div>
+            <p className="mt-1 text-sm text-neutral-500">
+              Track liquor and bar inventory, stock movements, and bottle unit conversions.
+            </p>
+            <p className="mt-2 text-xs text-amber-600 font-medium">
+              Currently not supported bar inventory for your store.
+            </p>
+          </div>
+          <Toggle
+            on={false}
+            onToggle={() => {}}
+            disabled={true}
+          />
+        </div>
       </div>
 
       {/* Restaurant Details */}
