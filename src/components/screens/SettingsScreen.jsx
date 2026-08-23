@@ -2,7 +2,7 @@ import Toggle from '../Toggle'
 import { useState, useEffect } from 'react'
 import { initializeApp, deleteApp } from 'firebase/app'
 import { getFirestore, collection, getDocs, limit, query } from 'firebase/firestore'
-import { IconTrash } from '../Icons'
+import { IconTrash, IconLock, IconEye } from '../Icons'
 
 export default function SettingsScreen({
   restaurantSettings,
@@ -19,6 +19,7 @@ export default function SettingsScreen({
   handleRestaurantAddressChange,
   handleRestaurantPhoneChange,
   handleRestaurantWebsiteChange,
+  handleAppPinChange,
   savedMenus,
   setDeleteConfirmId,
   tableTrackingEnabled,
@@ -43,6 +44,12 @@ export default function SettingsScreen({
   const [slugError, setSlugError] = useState('')
   const [editingWebsite, setEditingWebsite] = useState(false)
 
+  // App Security PIN state
+  const [pinInput, setPinInput] = useState('')
+  const [isEditingPin, setIsEditingPin] = useState(false)
+  const [showPin, setShowPin] = useState(false)
+  const [pinError, setPinError] = useState('')
+  const [pinSuccess, setPinSuccess] = useState('')
 
   const [tempName, setTempName] = useState(restaurantSettings?.name || '')
   const [tempSlug, setTempSlug] = useState(restaurantSettings?.slug || '')
@@ -778,6 +785,159 @@ export default function SettingsScreen({
           </div>
           <Toggle on={false} onToggle={() => { }} disabled={true} />
         </div>
+      </div>
+
+      {/* App Security PIN */}
+      <div className="card p-5 mb-4">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#16a34a' }}>Security</p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-100 text-green-700 flex-shrink-0 mt-0.5">
+              <IconLock />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-neutral-900">App Security PIN</p>
+                {restaurantSettings?.appPin && !isEditingPin && (
+                  <span className="rounded-md bg-green-50 px-2 py-0.5 text-xs font-semibold text-green-700 border border-green-200">
+                    Active
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-neutral-500">
+                Set a 4-digit PIN for application security, staff authentication, and protected admin actions.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {restaurantSettings?.appPin && !isEditingPin ? (
+          <div className="mt-4 pt-4 border-t border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center bg-neutral-100 px-3.5 py-1.5 rounded-lg border border-neutral-200 font-mono text-base tracking-widest font-bold text-neutral-800">
+                {showPin ? restaurantSettings.appPin : '••••'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPin(!showPin)}
+                className="text-neutral-500 hover:text-neutral-800 text-xs font-medium flex items-center gap-1.5 transition py-1 px-2 rounded-lg hover:bg-neutral-100"
+                title={showPin ? 'Hide PIN' : 'Show PIN'}
+              >
+                <IconEye />
+                <span>{showPin ? 'Hide' : 'Reveal'}</span>
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPinInput(restaurantSettings.appPin || '')
+                  setPinError('')
+                  setPinSuccess('')
+                  setIsEditingPin(true)
+                }}
+                disabled={isRestaurantUpdating}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+              >
+                Change PIN
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('Are you sure you want to remove the App PIN?')) {
+                    setPinError('')
+                    try {
+                      await handleAppPinChange?.('')
+                      setPinSuccess('PIN successfully removed.')
+                      setTimeout(() => setPinSuccess(''), 3000)
+                    } catch (err) {
+                      setPinError(err.message || 'Failed to remove PIN.')
+                    }
+                  }
+                }}
+                disabled={isRestaurantUpdating}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 pt-4 border-t border-neutral-100">
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="relative flex items-center">
+                  <input
+                    type={showPin ? 'text' : 'password'}
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={pinInput}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 4)
+                      setPinInput(val)
+                      if (pinError) setPinError('')
+                    }}
+                    placeholder="4-digit PIN"
+                    disabled={isRestaurantUpdating}
+                    className="font-mono text-center tracking-widest text-lg w-36 rounded-lg border border-neutral-300 px-3 py-2 outline-none transition focus:border-green-500 font-bold bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(!showPin)}
+                    className="ml-2 text-neutral-400 hover:text-neutral-700 p-2 transition"
+                    title={showPin ? 'Hide PIN' : 'Show PIN'}
+                  >
+                    <IconEye />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!/^\d{4}$/.test(pinInput)) {
+                        setPinError('PIN must be exactly 4 numeric digits (0-9).')
+                        return
+                      }
+                      setPinError('')
+                      try {
+                        await handleAppPinChange?.(pinInput)
+                        setIsEditingPin(false)
+                        setPinInput('')
+                        setPinSuccess('PIN saved successfully!')
+                        setTimeout(() => setPinSuccess(''), 3000)
+                      } catch (err) {
+                        setPinError(err.message || 'Failed to save PIN.')
+                      }
+                    }}
+                    disabled={isRestaurantUpdating || pinInput.length !== 4}
+                    className="btn-green text-xs px-4 py-2 font-semibold disabled:opacity-60"
+                  >
+                    {isRestaurantUpdating ? 'Saving...' : 'Save PIN'}
+                  </button>
+                  {restaurantSettings?.appPin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditingPin(false)
+                        setPinInput('')
+                        setPinError('')
+                      }}
+                      disabled={isRestaurantUpdating}
+                      className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+              {pinError && <p className="text-xs text-red-600 font-medium">{pinError}</p>}
+              {pinSuccess && <p className="text-xs text-green-600 font-medium">{pinSuccess}</p>}
+              <p className="text-xs text-neutral-400">
+                Enter a 4-digit numeric PIN (e.g. 1234). Saved directly to your Firebase Firestore restaurant database record.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Backup Database Setup */}

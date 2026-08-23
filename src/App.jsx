@@ -1399,6 +1399,7 @@ function Editor() {
           tableCount: 0,
           roomOrderingEnabled: false,
           rooms: [],
+          appPin: '',
         }
         setRestaurantSettings(defaults)
         await saveRestaurantSettings(restaurantId, defaults)
@@ -1604,6 +1605,14 @@ function Editor() {
     setRestaurantSettings((c) => ({ ...c, website: newWebsite }))
     setIsRestaurantUpdating(true)
     await saveRestaurantSettings(restaurantId, { ...restaurantSettings, website: newWebsite })
+    setIsRestaurantUpdating(false)
+  }
+
+  const handleAppPinChange = async (newPin) => {
+    if (!restaurantId || !restaurantSettings) return
+    setRestaurantSettings((c) => ({ ...c, appPin: newPin }))
+    setIsRestaurantUpdating(true)
+    await saveRestaurantSettings(restaurantId, { ...restaurantSettings, appPin: newPin })
     setIsRestaurantUpdating(false)
   }
 
@@ -2104,6 +2113,7 @@ function Editor() {
               isWaiterCodesUpdating={isWaiterCodesUpdating}
               onAddWaiterCode={handleAddWaiterCode}
               onDeleteWaiterCode={handleDeleteWaiterCode}
+              handleAppPinChange={handleAppPinChange}
             />}
             {activeSection === 'profile' && <ProfileScreen
               user={user}
