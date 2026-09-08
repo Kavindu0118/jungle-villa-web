@@ -84,11 +84,45 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
     setActiveSubcategoryId('all')
   }
 
-  const renderFilterTabs = () => {
-    if (!menu.sections || menu.sections.length === 0) return null
+  const isDiscountCategory = (cat) => {
+    if (!cat) return false
+    const text = typeof cat === 'string' ? cat : (cat.title || cat.name || cat.category || '')
+    return /discount/i.test(text.trim())
+  }
 
-    const selectedSection = menu.sections.find((s) => s.id === activeSectionId)
-    const activeSectionSubs = selectedSection?.subcategories || []
+  // Filter out any discounts category/section, subcategory, or discount line items from the menu preview
+  const sanitizedSections = useMemo(() => {
+    if (!menu?.sections || !Array.isArray(menu.sections)) return []
+    return menu.sections
+      .filter((section) => !isDiscountCategory(section))
+      .map((section) => {
+        const subcategories = (section.subcategories || [])
+          .filter((sub) => !isDiscountCategory(sub))
+          .map((sub) => ({
+            ...sub,
+            items: (sub.items || []).filter((item) => !isDiscountCategory(item.name) && !isDiscountCategory(item.category))
+          }))
+        const items = (section.items || []).filter((item) => !isDiscountCategory(item.name) && !isDiscountCategory(item.category))
+        return {
+          ...section,
+          subcategories,
+          items,
+        }
+      })
+  }, [menu?.sections])
+
+  const validActiveSectionId = (activeSectionId === 'all' || sanitizedSections.some((s) => s.id === activeSectionId))
+    ? activeSectionId
+    : 'all'
+
+  const selectedSection = sanitizedSections.find((s) => s.id === validActiveSectionId)
+  const activeSectionSubs = selectedSection?.subcategories || []
+  const validActiveSubcategoryId = (activeSubcategoryId === 'all' || activeSectionSubs.some((sub) => sub.id === activeSubcategoryId))
+    ? activeSubcategoryId
+    : 'all'
+
+  const renderFilterTabs = () => {
+    if (!sanitizedSections || sanitizedSections.length === 0) return null
 
     return (
       <div className="mb-6 flex flex-col gap-3">
@@ -97,19 +131,19 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
           <button
             type="button"
             onClick={() => handleSectionSelect('all')}
-            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeSectionId === 'all'
+            className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${validActiveSectionId === 'all'
                 ? 'bg-neutral-900 text-white shadow-sm scale-[1.02]'
                 : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
               }`}
           >
             All Categories
           </button>
-          {menu.sections.map((section) => (
+          {sanitizedSections.map((section) => (
             <button
               key={section.id}
               type="button"
               onClick={() => handleSectionSelect(section.id)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${activeSectionId === section.id
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${validActiveSectionId === section.id
                   ? 'bg-green-600 text-white shadow-sm scale-[1.02]'
                   : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70'
                 }`}
@@ -120,24 +154,24 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
         </div>
 
         {/* Subcategory Tabs */}
-        {activeSectionId !== 'all' && activeSectionSubs.length > 0 && (
+        {validActiveSectionId !== 'all' && activeSectionSubs.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none border-t border-dashed border-neutral-200 pt-3">
             <button
               type="button"
               onClick={() => setActiveSubcategoryId('all')}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${activeSubcategoryId === 'all'
+              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${validActiveSubcategoryId === 'all'
                   ? 'bg-neutral-800 text-white shadow-sm'
                   : 'bg-neutral-50 text-neutral-500 border border-neutral-200/40 hover:bg-neutral-100'
                 }`}
             >
-              All {selectedSection.title}
+              All {selectedSection?.title}
             </button>
             {activeSectionSubs.map((sub) => (
               <button
                 key={sub.id}
                 type="button"
                 onClick={() => setActiveSubcategoryId(sub.id)}
-                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${activeSubcategoryId === sub.id
+                className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${validActiveSubcategoryId === sub.id
                     ? 'bg-green-100 text-green-800 border border-green-200 font-semibold'
                     : 'bg-neutral-50 text-neutral-500 border border-neutral-200/40 hover:bg-neutral-100'
                   }`}
@@ -152,15 +186,15 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
   }
 
   // Filter sections and subcategories for rendering
-  const filteredSections = menu.sections.map((section) => {
-    if (activeSectionId !== 'all' && section.id !== activeSectionId) {
+  const filteredSections = sanitizedSections.map((section) => {
+    if (validActiveSectionId !== 'all' && section.id !== validActiveSectionId) {
       return null
     }
     if (section.subcategories && section.subcategories.length > 0) {
-      if (activeSubcategoryId !== 'all') {
+      if (validActiveSubcategoryId !== 'all') {
         return {
           ...section,
-          subcategories: section.subcategories.filter((sub) => sub.id === activeSubcategoryId)
+          subcategories: section.subcategories.filter((sub) => sub.id === validActiveSubcategoryId)
         }
       }
     }
@@ -343,9 +377,7 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
           {/* Dark-variant filter tabs */}
           <div className="mt-5 w-full">
             {(() => {
-              if (!menu.sections || menu.sections.length === 0) return null
-              const selectedSection = menu.sections.find((s) => s.id === activeSectionId)
-              const activeSectionSubs = selectedSection?.subcategories || []
+              if (!sanitizedSections || sanitizedSections.length === 0) return null
               return (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -354,21 +386,21 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
                       onClick={() => handleSectionSelect('all')}
                       className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200"
                       style={
-                        activeSectionId === 'all'
+                        validActiveSectionId === 'all'
                           ? { background: '#f97316', color: '#fff', boxShadow: '0 2px 8px rgba(249,115,22,0.4)' }
                           : { background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }
                       }
                     >
                       All
                     </button>
-                    {menu.sections.map((section) => (
+                    {sanitizedSections.map((section) => (
                       <button
                         key={section.id}
                         type="button"
                         onClick={() => handleSectionSelect(section.id)}
                         className="flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200"
                         style={
-                          activeSectionId === section.id
+                          validActiveSectionId === section.id
                             ? { background: '#f97316', color: '#fff', boxShadow: '0 2px 8px rgba(249,115,22,0.4)' }
                             : { background: 'rgba(255,255,255,0.08)', color: '#d1d5db' }
                         }
@@ -377,19 +409,19 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
                       </button>
                     ))}
                   </div>
-                  {activeSectionId !== 'all' && activeSectionSubs.length > 0 && (
+                  {validActiveSectionId !== 'all' && activeSectionSubs.length > 0 && (
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                       <button
                         type="button"
                         onClick={() => setActiveSubcategoryId('all')}
                         className="flex-shrink-0 px-3.5 py-1 rounded-full text-xs font-medium transition-all duration-200"
                         style={
-                          activeSubcategoryId === 'all'
+                          validActiveSubcategoryId === 'all'
                             ? { background: '#16a34a', color: '#fff' }
                             : { background: 'rgba(255,255,255,0.07)', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.1)' }
                         }
                       >
-                        All {selectedSection.title}
+                        All {selectedSection?.title}
                       </button>
                       {activeSectionSubs.map((sub) => (
                         <button
@@ -398,7 +430,7 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
                           onClick={() => setActiveSubcategoryId(sub.id)}
                           className="flex-shrink-0 px-3.5 py-1 rounded-full text-xs font-medium transition-all duration-200"
                           style={
-                            activeSubcategoryId === sub.id
+                            validActiveSubcategoryId === sub.id
                               ? { background: '#16a34a', color: '#fff' }
                               : { background: 'rgba(255,255,255,0.07)', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.1)' }
                           }
