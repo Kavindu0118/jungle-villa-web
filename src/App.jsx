@@ -14,7 +14,7 @@ import SettingsScreen from './components/screens/SettingsScreen'
 import ProfileScreen from './components/screens/ProfileScreen'
 import LandingPage from './components/landing/LandingPage'
 import {
-  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX, IconAnalytics, IconInventory
+  IconDashboard, IconMenu, IconSettings, IconProfile, IconQr, IconPlus, IconEdit, IconTrash, IconEye, IconLogout, IconX, IconAnalytics, IconInventory, IconCode, IconUpload, IconCopy, IconCheck, IconDownload
 } from './components/Icons'
 import {
   saveMenuRecord,
@@ -528,14 +528,412 @@ function TemplateMenuPreview({ menu, currencySymbol = '$', orderingEnabled = fal
 
 // Toggle moved to components/Toggle.jsx
 
+// ─── Menu JSON Sample & Helpers ──────────────────────────────────────────────
+export const SAMPLE_MENU_JSON = {
+  restaurantName: "Jungle Villa Restaurant",
+  menuTitle: "Main Dining & Bar Menu",
+  notes: "All prices are subject to 10% service charge and applicable local taxes.",
+  sections: [
+    {
+      title: "Starters & Appetizers",
+      items: [
+        {
+          name: "Crispy Calamari Rings",
+          price: "12.50",
+          description: "Golden fried tender squid rings served with garlic aioli and lemon wedge.",
+          imageUrl: ""
+        },
+        {
+          name: "Bruschetta al Pomodoro",
+          price: "8.00",
+          description: "Toasted sourdough bread topped with diced tomatoes, fresh basil, and extra virgin olive oil.",
+          imageUrl: ""
+        }
+      ],
+      subcategories: [
+        {
+          title: "Chef's Special Soups",
+          items: [
+            {
+              name: "Creamy Wild Mushroom Soup",
+              price: "7.50",
+              description: "Velvety blend of roasted forest mushrooms, fresh thyme, and truffle cream.",
+              imageUrl: ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      title: "Main Courses",
+      items: [
+        {
+          name: "Grilled Norwegian Salmon",
+          price: "24.00",
+          description: "Pan-seared salmon fillet on crushed baby potatoes with asparagus and lemon butter sauce.",
+          imageUrl: ""
+        },
+        {
+          name: "Angus Ribeye Steak 300g",
+          price: "32.00",
+          description: "Prime grass-fed beef served with herb butter, roasted vegetables, and pepper jus.",
+          imageUrl: ""
+        },
+        {
+          name: "Truffle Tagliatelle",
+          price: "18.50",
+          description: "Handmade ribbon pasta in black truffle cream sauce with aged parmesan.",
+          imageUrl: ""
+        }
+      ]
+    },
+    {
+      title: "Desserts",
+      items: [
+        {
+          name: "Classic Tiramisu",
+          price: "9.00",
+          description: "Espresso soaked ladyfingers layered with mascarpone cream and cocoa powder.",
+          imageUrl: ""
+        },
+        {
+          name: "Warm Molten Lava Cake",
+          price: "9.50",
+          description: "Belgian chocolate cake with a molten center served with Madagascar vanilla gelato.",
+          imageUrl: ""
+        }
+      ]
+    },
+    {
+      title: "Beverages & Cocktails",
+      items: [
+        {
+          name: "Signature Passion Fruit Cooler",
+          price: "5.50",
+          description: "Fresh passion fruit pulp, mint leaves, crushed ice, and sparkling mineral water.",
+          imageUrl: ""
+        },
+        {
+          name: "Espresso Martini",
+          price: "11.00",
+          description: "Premium vodka, fresh espresso shot, coffee liqueur, and vanilla syrup.",
+          imageUrl: ""
+        }
+      ]
+    }
+  ]
+}
+
+export function parseAndNormalizeMenuJson(rawInput, currentDraftMenu, mode = 'replace', fallbackRestaurantName = '') {
+  let parsed
+  if (typeof rawInput === 'string') {
+    const trimmed = rawInput.trim()
+    if (!trimmed) throw new Error('Please paste or enter JSON content.')
+    try {
+      parsed = JSON.parse(trimmed)
+    } catch (e) {
+      throw new Error(`Invalid JSON syntax: ${e.message}`)
+    }
+  } else if (typeof rawInput === 'object' && rawInput !== null) {
+    parsed = rawInput
+  } else {
+    throw new Error('Invalid JSON input format.')
+  }
+
+  const cleanPrice = (p) => {
+    if (p === undefined || p === null) return '0.00'
+    const str = String(p).trim()
+    const num = parseFloat(str.replace(/[^0-9.]/g, ''))
+    return isNaN(num) ? '0.00' : String(num)
+  }
+
+  const normalizeItem = (it) => ({
+    id: it.id || createId('item'),
+    name: it.name || it.title || it.itemName || 'Untitled Item',
+    price: cleanPrice(it.price || it.itemPrice || it.rate || '0.00'),
+    description: it.description || it.desc || it.details || '',
+    imageUrl: it.imageUrl || it.image || it.img || '',
+  })
+
+  let newSections = []
+
+  // Case 1: Full menu object with sections or categories
+  if (!Array.isArray(parsed) && typeof parsed === 'object') {
+    const rawSections = parsed.sections || parsed.categories || []
+    if (Array.isArray(rawSections)) {
+      newSections = rawSections.map((sec) => {
+        const directItems = Array.isArray(sec.items) ? sec.items.map(normalizeItem) : []
+        const subcategories = Array.isArray(sec.subcategories)
+          ? sec.subcategories.map((sub) => ({
+              id: sub.id || createId('sub'),
+              title: sub.title || sub.name || 'Subcategory',
+              items: Array.isArray(sub.items) ? sub.items.map(normalizeItem) : [],
+            }))
+          : []
+        return {
+          id: sec.id || createId('section'),
+          title: sec.title || sec.name || 'Category',
+          items: directItems,
+          subcategories,
+        }
+      })
+    }
+  } else if (Array.isArray(parsed)) {
+    // Case 2: Array of sections OR array of raw items
+    const isSectionArray = parsed.some((el) => el && (Array.isArray(el.items) || Array.isArray(el.subcategories)))
+
+    if (isSectionArray) {
+      newSections = parsed.map((sec) => {
+        const directItems = Array.isArray(sec.items) ? sec.items.map(normalizeItem) : []
+        const subcategories = Array.isArray(sec.subcategories)
+          ? sec.subcategories.map((sub) => ({
+              id: sub.id || createId('sub'),
+              title: sub.title || sub.name || 'Subcategory',
+              items: Array.isArray(sub.items) ? sub.items.map(normalizeItem) : [],
+            }))
+          : []
+        return {
+          id: sec.id || createId('section'),
+          title: sec.title || sec.name || 'Category',
+          items: directItems,
+          subcategories,
+        }
+      })
+    } else {
+      // Case 3: Flat list of items grouped by category / section
+      const groups = {}
+      parsed.forEach((it) => {
+        const catName = it.category || it.section || it.categoryName || 'General Items'
+        if (!groups[catName]) groups[catName] = []
+        groups[catName].push(normalizeItem(it))
+      })
+      newSections = Object.entries(groups).map(([catTitle, items]) => ({
+        id: createId('section'),
+        title: catTitle,
+        items,
+        subcategories: [],
+      }))
+    }
+  }
+
+  if (newSections.length === 0) {
+    throw new Error('No categories or items found in the provided JSON.')
+  }
+
+  if (mode === 'append' && currentDraftMenu?.sections) {
+    const combinedSections = [...currentDraftMenu.sections, ...newSections]
+    return {
+      ...currentDraftMenu,
+      sections: combinedSections,
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  // Replace mode
+  return {
+    id: currentDraftMenu?.id || createId('menu'),
+    templateId: parsed.templateId || currentDraftMenu?.templateId || 'standard-clean',
+    templateLabel: parsed.templateLabel || currentDraftMenu?.templateLabel || 'Standard Clean',
+    restaurantName: parsed.restaurantName || currentDraftMenu?.restaurantName || fallbackRestaurantName || '',
+    menuTitle: parsed.menuTitle || currentDraftMenu?.menuTitle || 'Imported Menu',
+    notes: parsed.notes || currentDraftMenu?.notes || '',
+    sections: newSections,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
 // ─── Editor (Main Dashboard) ──────────────────────────────────────────────────
 // ── Menu Builder Inline Panel ───────────────────────────────────────────────────
-function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, saveStatus, updateDraft, menuTemplates, selectedTemplateId, loadTemplate, addSection, updateSectionField, removeSection, removeSubcategory, addSubcategory, updateSubcategoryTitle, restaurantSettings, currencySymbol, restaurantId, updateSectionList, isSupabaseConfigured, uploadMenuItemImage }) {
-  const [activeTab, setActiveTab] = useState('items') // 'items' | 'setup'
+function BuilderInlinePanel({
+  draftMenu,
+  saveMenu,
+  isSaving,
+  setShowBuilder,
+  saveStatus,
+  updateDraft,
+  menuTemplates,
+  selectedTemplateId,
+  loadTemplate,
+  addSection,
+  updateSectionField,
+  removeSection,
+  removeSubcategory,
+  addSubcategory,
+  updateSubcategoryTitle,
+  restaurantSettings,
+  currencySymbol,
+  restaurantId,
+  updateSectionList,
+  isSupabaseConfigured,
+  uploadMenuItemImage,
+  initialTab = 'items',
+  setDraftMenu
+}) {
+  const [activeTab, setActiveTab] = useState(initialTab || 'items') // 'items' | 'setup' | 'json'
   const [editingItem, setEditingItem] = useState(null)
   const [isAddingNew, setIsAddingNew] = useState(false)
   const [uploadingItemImage, setUploadingItemImage] = useState({})
   const [expandedSubcategories, setExpandedSubcategories] = useState({})
+
+  // JSON Import & Export State
+  const [jsonText, setJsonText] = useState('')
+  const [importMode, setImportMode] = useState('replace') // 'replace' | 'append'
+  const [jsonError, setJsonError] = useState('')
+  const [jsonSuccess, setJsonSuccess] = useState('')
+  const [copiedSample, setCopiedSample] = useState(false)
+  const [showSampleSchema, setShowSampleSchema] = useState(false)
+  const [isExportingJson, setIsExportingJson] = useState(false)
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [initialTab])
+
+  const draftItemCount = useMemo(() => {
+    if (!draftMenu?.sections) return 0
+    return draftMenu.sections.reduce((acc, s) => {
+      const subItems = (s.subcategories || []).reduce((subAcc, sub) => subAcc + (sub.items?.length || 0), 0)
+      return acc + (s.items?.length || 0) + subItems
+    }, 0)
+  }, [draftMenu?.sections])
+
+  const jsonPreviewStats = useMemo(() => {
+    if (!jsonText.trim()) return null
+    try {
+      const parsed = JSON.parse(jsonText.trim())
+      let categoriesCount = 0
+      let subcategoriesCount = 0
+      let itemsCount = 0
+
+      if (parsed && typeof parsed === 'object') {
+        const sections = Array.isArray(parsed)
+          ? (parsed.some(e => Array.isArray(e?.items) || Array.isArray(e?.subcategories))
+              ? parsed
+              : [{ title: 'Items', items: parsed }])
+          : (parsed.sections || parsed.categories || [])
+
+        if (Array.isArray(sections)) {
+          categoriesCount = sections.length
+          sections.forEach(s => {
+            itemsCount += (s?.items?.length || 0)
+            if (Array.isArray(s?.subcategories)) {
+              subcategoriesCount += s.subcategories.length
+              s.subcategories.forEach(sub => {
+                itemsCount += (sub?.items?.length || 0)
+              })
+            }
+          })
+        }
+      }
+      return { valid: true, categoriesCount, subcategoriesCount, itemsCount, error: null }
+    } catch (e) {
+      return { valid: false, categoriesCount: 0, subcategoriesCount: 0, itemsCount: 0, error: e.message }
+    }
+  }, [jsonText])
+
+  const handleApplyJson = () => {
+    setJsonError('')
+    setJsonSuccess('')
+    try {
+      const updated = parseAndNormalizeMenuJson(
+        jsonText,
+        draftMenu,
+        importMode,
+        restaurantSettings?.name || ''
+      )
+      if (setDraftMenu) {
+        setDraftMenu(updated)
+      } else {
+        updateDraft(() => updated)
+      }
+      const totalItems = updated.sections.reduce((acc, s) => {
+        const subCount = (s.subcategories || []).reduce((subAcc, sub) => subAcc + (sub.items?.length || 0), 0)
+        return acc + (s.items?.length || 0) + subCount
+      }, 0)
+
+      setJsonSuccess(`🎉 Successfully ${importMode === 'append' ? 'appended' : 'loaded'} ${updated.sections.length} Categories and ${totalItems} Items!`)
+      if (typeof saveStatus === 'function') {
+        saveStatus('Menu updated from JSON. Make sure to click Save to publish.')
+      }
+    } catch (err) {
+      setJsonError(err.message || 'Failed to parse JSON.')
+    }
+  }
+
+  const handleLoadSampleJson = () => {
+    setJsonText(JSON.stringify(SAMPLE_MENU_JSON, null, 2))
+    setJsonError('')
+    setJsonSuccess('Sample JSON loaded into the editor. Click "Apply Menu JSON" to update your menu!')
+  }
+
+  const handleCopySampleJson = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(SAMPLE_MENU_JSON, null, 2))
+      setCopiedSample(true)
+      setTimeout(() => setCopiedSample(false), 2500)
+    } catch {
+      alert('Unable to copy sample to clipboard.')
+    }
+  }
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target.result
+      setJsonText(content)
+      setJsonError('')
+      setJsonSuccess(`Loaded file "${file.name}". Click "Apply Menu JSON" to update your menu.`)
+    }
+    reader.onerror = () => {
+      setJsonError('Failed to read file.')
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  const handleExportJson = () => {
+    try {
+      const exportData = {
+        restaurantName: draftMenu?.restaurantName || '',
+        menuTitle: draftMenu?.menuTitle || '',
+        notes: draftMenu?.notes || '',
+        templateId: draftMenu?.templateId || 'standard-clean',
+        templateLabel: draftMenu?.templateLabel || 'Standard Clean',
+        sections: (draftMenu?.sections || []).map(s => ({
+          title: s.title,
+          items: (s.items || []).map(it => ({
+            name: it.name,
+            price: it.price,
+            description: it.description || '',
+            imageUrl: it.imageUrl || ''
+          })),
+          subcategories: (s.subcategories || []).map(sub => ({
+            title: sub.title,
+            items: (sub.items || []).map(it => ({
+              name: it.name,
+              price: it.price,
+              description: it.description || '',
+              imageUrl: it.imageUrl || ''
+            }))
+          }))
+        }))
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2))
+      const downloadAnchor = document.createElement('a')
+      downloadAnchor.setAttribute("href", dataStr)
+      downloadAnchor.setAttribute("download", `${(draftMenu?.menuTitle || 'menu').toLowerCase().replace(/\s+/g, '_')}_export.json`)
+      document.body.appendChild(downloadAnchor)
+      downloadAnchor.click()
+      downloadAnchor.remove()
+      setIsExportingJson(true)
+      setTimeout(() => setIsExportingJson(false), 2000)
+    } catch {
+      alert('Failed to export JSON.')
+    }
+  }
 
   const toggleSubcategory = (subcategoryId) => {
     setExpandedSubcategories((prev) => ({
@@ -668,6 +1066,20 @@ function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, sav
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => setActiveTab('json')}
+            className={`text-xs py-1.5 px-3 rounded-lg border flex items-center gap-1.5 font-semibold transition ${
+              activeTab === 'json'
+                ? 'bg-green-50 border-green-500 text-green-700'
+                : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:border-green-300'
+            }`}
+            title="Import / Export Menu JSON"
+          >
+            <IconCode />
+            <span>JSON Import</span>
+          </button>
+
+          <button
             onClick={saveMenu}
             disabled={!draftMenu || isSaving}
             className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1.5"
@@ -696,16 +1108,35 @@ function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, sav
         <button
           type="button"
           onClick={() => { setActiveTab('items'); setEditingItem(null); setIsAddingNew(false) }}
-          className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'items' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+          className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 flex items-center justify-center gap-1.5 ${
+            activeTab === 'items' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'
+          }`}
         >
-          Menu Items
+          <span>Menu Items</span>
+          {draftItemCount > 0 && (
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${activeTab === 'items' ? 'bg-white/20 text-white' : 'bg-green-200 text-green-800'}`}>
+              {draftItemCount}
+            </span>
+          )}
         </button>
         <button
           type="button"
           onClick={() => { setActiveTab('setup'); setEditingItem(null); setIsAddingNew(false) }}
-          className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${activeTab === 'setup' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+          className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 ${
+            activeTab === 'setup' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'
+          }`}
         >
           Menu Setup
+        </button>
+        <button
+          type="button"
+          onClick={() => { setActiveTab('json'); setEditingItem(null); setIsAddingNew(false) }}
+          className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition duration-150 flex items-center justify-center gap-1.5 ${
+            activeTab === 'json' ? 'bg-green-600 text-white shadow-xs' : 'bg-green-100 text-green-700 hover:bg-green-200'
+          }`}
+        >
+          <IconCode />
+          <span>JSON Import</span>
         </button>
       </div>
 
@@ -919,41 +1350,62 @@ function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, sav
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Item Listings</h3>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (draftMenu.sections.length === 0) {
-                        alert('Please add a section/category under Setup tab first.')
-                        return
-                      }
-                      setEditingItem({
-                        id: createId('itm'),
-                        name: '',
-                        description: '',
-                        price: '',
-                        imageUrl: '',
-                        sectionId: draftMenu.sections[0].id,
-                        subcategoryId: ''
-                      })
-                      setIsAddingNew(true)
-                    }}
-                    className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1"
-                  >
-                    <IconPlus className="w-3.5 h-3.5" /> Add Item
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('json')}
+                      className="btn-ghost text-xs py-1.5 px-3 rounded-lg border border-neutral-200 bg-white hover:border-green-400 flex items-center gap-1.5"
+                    >
+                      <IconCode className="w-3.5 h-3.5" /> Import JSON
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (draftMenu.sections.length === 0) {
+                          alert('Please add a section/category under Setup tab first.')
+                          return
+                        }
+                        setEditingItem({
+                          id: createId('itm'),
+                          name: '',
+                          description: '',
+                          price: '',
+                          imageUrl: '',
+                          sectionId: draftMenu.sections[0].id,
+                          subcategoryId: ''
+                        })
+                        setIsAddingNew(true)
+                      }}
+                      className="btn-green text-xs py-1.5 px-3 rounded-lg flex items-center gap-1"
+                    >
+                      <IconPlus className="w-3.5 h-3.5" /> Add Item
+                    </button>
+                  </div>
                 </div>
 
                 {/* Grouped Listings */}
                 {draftMenu?.sections.length === 0 ? (
-                  <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200">
-                    <p className="text-neutral-400 text-sm">No sections created yet.</p>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('setup')}
-                      className="mt-2 text-xs font-semibold text-green-600 hover:underline"
-                    >
-                      Go to Setup to add categories
-                    </button>
+                  <div className="text-center py-10 bg-neutral-50 rounded-2xl border border-dashed border-neutral-200 space-y-3">
+                    <p className="text-neutral-500 text-sm font-semibold">No menu categories created yet.</p>
+                    <p className="text-neutral-400 text-xs max-w-sm mx-auto">
+                      You can add categories manually in Setup, or import your entire menu at once via JSON.
+                    </p>
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('json')}
+                        className="btn-green text-xs py-1.5 px-3.5 flex items-center gap-1.5"
+                      >
+                        <IconCode /> Import via JSON
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('setup')}
+                        className="btn-ghost text-xs py-1.5 px-3.5 border border-neutral-200 bg-white"
+                      >
+                        Go to Setup
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-5">
@@ -1019,6 +1471,29 @@ function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, sav
 
         {activeTab === 'setup' && (
           <div className="space-y-5">
+            {/* Quick JSON Import Banner */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-md bg-green-600 text-white text-[10px]">
+                    <IconCode />
+                  </span>
+                  <p className="text-xs font-bold text-green-900">Bulk Import via JSON</p>
+                </div>
+                <p className="text-[11px] text-green-700 mt-1">
+                  Have a menu in JSON format? Load all categories, subcategories, and items in 1-click.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('json')}
+                className="btn-green text-xs py-1.5 px-3.5 rounded-lg flex items-center justify-center gap-1.5 flex-shrink-0"
+              >
+                <IconCode />
+                <span>Open JSON Importer</span>
+              </button>
+            </div>
+
             {/* Restaurant Name & Menu Title */}
             <div className="grid grid-cols-2 gap-3 bg-neutral-50/30 p-3.5 rounded-xl border border-neutral-200/60">
               <label className="block">
@@ -1165,6 +1640,239 @@ function BuilderInlinePanel({ draftMenu, saveMenu, isSaving, setShowBuilder, sav
             </div>
           </div>
         )}
+
+        {activeTab === 'json' && (
+          <div className="space-y-4">
+            {/* JSON Importer Header Card */}
+            <div className="bg-neutral-50 rounded-2xl border border-neutral-200/80 p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="font-bold text-sm text-neutral-900 flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-green-100 text-green-700">
+                      <IconCode />
+                    </span>
+                    <span>Import Menu via JSON</span>
+                  </h3>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Paste JSON or click &quot;Load Sample JSON&quot; to populate and update your entire menu in 1-click.
+                  </p>
+                </div>
+
+                {/* Import Mode Selector */}
+                <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-neutral-200 flex-shrink-0 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setImportMode('replace')}
+                    className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                      importMode === 'replace'
+                        ? 'bg-green-600 text-white shadow-xs'
+                        : 'text-neutral-600 hover:text-neutral-900'
+                    }`}
+                  >
+                    Replace Menu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImportMode('append')}
+                    className={`px-2.5 py-1 rounded-lg font-semibold transition ${
+                      importMode === 'append'
+                        ? 'bg-green-600 text-white shadow-xs'
+                        : 'text-neutral-600 hover:text-neutral-900'
+                    }`}
+                  >
+                    Append Items
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Actions Toolbar */}
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-neutral-200/60 text-xs">
+                <button
+                  type="button"
+                  onClick={handleLoadSampleJson}
+                  className="btn-ghost py-1.5 px-3 rounded-lg border border-neutral-200 bg-white hover:border-green-400 hover:text-green-700 flex items-center gap-1.5 font-semibold text-neutral-700"
+                  title="Load sample menu into the editor"
+                >
+                  ⚡ Load Sample JSON
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopySampleJson}
+                  className="btn-ghost py-1.5 px-3 rounded-lg border border-neutral-200 bg-white hover:border-green-400 hover:text-green-700 flex items-center gap-1.5 font-medium text-neutral-700"
+                  title="Copy sample schema to clipboard"
+                >
+                  <IconCopy />
+                  <span>{copiedSample ? '✓ Copied Schema!' : 'Copy Sample Schema'}</span>
+                </button>
+
+                <label className="btn-ghost py-1.5 px-3 rounded-lg border border-neutral-200 bg-white hover:border-green-400 hover:text-green-700 flex items-center gap-1.5 font-medium text-neutral-700 cursor-pointer">
+                  <IconUpload />
+                  <span>Upload .json File</span>
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  onClick={handleExportJson}
+                  className="btn-ghost py-1.5 px-3 rounded-lg border border-neutral-200 bg-white hover:border-blue-400 hover:text-blue-700 flex items-center gap-1.5 font-medium text-neutral-700 ml-auto"
+                  title="Export current menu as JSON file"
+                >
+                  <IconDownload />
+                  <span>{isExportingJson ? 'Exported!' : 'Export Current Menu'}</span>
+                </button>
+
+                {jsonText && (
+                  <button
+                    type="button"
+                    onClick={() => { setJsonText(''); setJsonError(''); setJsonSuccess('') }}
+                    className="text-neutral-400 hover:text-red-500 text-xs px-2 py-1"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Notifications */}
+            {jsonSuccess && (
+              <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-xs text-green-800 font-medium flex items-center justify-between gap-2 animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <IconCheck />
+                  <span>{jsonSuccess}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('items')}
+                  className="text-green-900 font-bold underline hover:text-green-700 whitespace-nowrap"
+                >
+                  View Items →
+                </button>
+              </div>
+            )}
+
+            {jsonError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 font-medium flex items-center gap-2 animate-fadeIn">
+                <span>⚠️</span>
+                <span>{jsonError}</span>
+              </div>
+            )}
+
+            {/* Editor Area */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs px-1">
+                <label htmlFor="menu-json-textarea" className="font-semibold text-neutral-700">
+                  JSON Menu Content
+                </label>
+                {jsonPreviewStats && (
+                  <div>
+                    {jsonPreviewStats.valid ? (
+                      <span className="text-[11px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md">
+                        ✓ Ready: {jsonPreviewStats.categoriesCount} Categories, {jsonPreviewStats.subcategoriesCount} Subs, {jsonPreviewStats.itemsCount} Items
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-md truncate max-w-[200px] inline-block">
+                        ⚠️ Invalid JSON Syntax
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <textarea
+                id="menu-json-textarea"
+                rows={13}
+                value={jsonText}
+                onChange={(e) => {
+                  setJsonText(e.target.value)
+                  if (jsonError) setJsonError('')
+                }}
+                placeholder={`Paste your menu JSON here or click "⚡ Load Sample JSON" above...\n\nExample:\n{\n  "restaurantName": "Jungle Villa",\n  "menuTitle": "Dinner Menu",\n  "sections": [\n    {\n      "title": "Starters",\n      "items": [\n        { "name": "Calamari", "price": "12.50", "description": "Crispy squid" }\n      ]\n    }\n  ]\n}`}
+                className="w-full font-mono text-xs p-3.5 rounded-xl border border-neutral-300 focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none bg-neutral-900 text-green-400 placeholder:text-neutral-500 leading-relaxed transition resize-y"
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Apply Button */}
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowSampleSchema(!showSampleSchema)}
+                className="text-xs font-semibold text-green-700 hover:text-green-800 flex items-center gap-1"
+              >
+                <span>{showSampleSchema ? '▾ Hide' : '▸ View'} Sample JSON Structure Reference</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleApplyJson}
+                disabled={!jsonText.trim() || (jsonPreviewStats && !jsonPreviewStats.valid)}
+                className="btn-green text-xs py-2.5 px-5 rounded-xl flex items-center gap-2 font-bold shadow-sm disabled:opacity-50"
+              >
+                <span>✨ Apply Menu JSON</span>
+                {jsonPreviewStats?.valid && (
+                  <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">
+                    {jsonPreviewStats.itemsCount} items
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Sample JSON Reference Accordion */}
+            {showSampleSchema && (
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 space-y-3 text-xs text-neutral-700">
+                <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
+                  <span className="font-bold text-neutral-900 text-xs">Sample JSON Reference Structure</span>
+                  <button
+                    type="button"
+                    onClick={handleCopySampleJson}
+                    className="text-[11px] font-semibold text-green-700 hover:text-green-800 flex items-center gap-1"
+                  >
+                    <IconCopy />
+                    <span>{copiedSample ? 'Copied!' : 'Copy Format'}</span>
+                  </button>
+                </div>
+
+                <p className="text-[11px] text-neutral-500 leading-normal">
+                  Below is the standard JSON structure used to define menus, categories, subcategories, prices, and descriptions:
+                </p>
+
+                <div className="rounded-xl overflow-hidden border border-neutral-300">
+                  <pre className="p-3.5 bg-neutral-900 text-neutral-100 font-mono text-[11px] leading-relaxed overflow-x-auto max-h-64">
+                    {JSON.stringify(SAMPLE_MENU_JSON, null, 2)}
+                  </pre>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div className="bg-white p-2.5 rounded-lg border border-neutral-200">
+                    <p className="font-bold text-neutral-900 mb-1">Top-level Properties</p>
+                    <ul className="list-disc list-inside space-y-0.5 text-neutral-600">
+                      <li><code className="text-green-700">restaurantName</code>: Restaurant display name</li>
+                      <li><code className="text-green-700">menuTitle</code>: Title (e.g. Dinner Menu)</li>
+                      <li><code className="text-green-700">notes</code>: Timings, tax notes, or footer info</li>
+                      <li><code className="text-green-700">sections</code>: Array of category objects</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-lg border border-neutral-200">
+                    <p className="font-bold text-neutral-900 mb-1">Category & Item Fields</p>
+                    <ul className="list-disc list-inside space-y-0.5 text-neutral-600">
+                      <li><code className="text-green-700">title</code>: Section / Subcategory name</li>
+                      <li><code className="text-green-700">name</code>: Item title</li>
+                      <li><code className="text-green-700">price</code>: Item price (e.g. &quot;12.50&quot; or 12.50)</li>
+                      <li><code className="text-green-700">description</code>: Item description / ingredients</li>
+                      <li><code className="text-green-700">imageUrl</code>: Optional photo URL</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1179,6 +1887,7 @@ function Editor() {
   const [profile, setProfile] = useState(null)
   const [activeSection, setActiveSection] = useState('dashboard')
   const [showBuilder, setShowBuilder] = useState(false)
+  const [builderInitialTab, setBuilderInitialTab] = useState('items')
   const [deleteConfirmId, setDeleteConfirmId] = useState(null)
   const [isDeletingMenu, setIsDeletingMenu] = useState(false)
 
@@ -1954,7 +2663,7 @@ function Editor() {
     window.open(`${window.location.origin}/menu/${slug}`, '_blank', 'noopener')
   }
 
-  const loadMenuForEditing = (menu) => {
+  const loadMenuForEditing = (menu, initialTab = 'items') => {
     setSelectedTemplateId(menu.templateId)
     setDraftMenu({
       id: menu.localId,
@@ -1967,11 +2676,12 @@ function Editor() {
       updatedAt: new Date().toISOString(),
     })
     setSaveStatus('Menu loaded for editing. Make changes and save.')
+    setBuilderInitialTab(initialTab)
     setShowBuilder(true)
     setActiveSection('dashboard')
   }
 
-  const openNewMenuBuilder = () => {
+  const openNewMenuBuilder = (initialTab = 'items') => {
     const defaultTemplate = menuTemplates[0]
     setSelectedTemplateId(defaultTemplate.id)
     setDraftMenu({
@@ -1985,6 +2695,7 @@ function Editor() {
       updatedAt: new Date().toISOString(),
     })
     setSaveStatus('Start building your menu.')
+    setBuilderInitialTab(initialTab)
     setShowBuilder(true)
     setActiveSection('dashboard')
   }
@@ -2071,7 +2782,7 @@ function Editor() {
         {/* When builder is open, it takes over the full main area */}
         {showBuilder ? (
           <div className="h-screen flex flex-col">
-            <BuilderInlinePanel {...{ draftMenu, saveMenu, isSaving, setShowBuilder, saveStatus, updateDraft, menuTemplates, selectedTemplateId, loadTemplate, addSection, updateSectionField, removeSection, removeSubcategory, addSubcategory, updateSubcategoryTitle, restaurantSettings, currencySymbol, restaurantId, updateSectionList, isSupabaseConfigured, uploadMenuItemImage }} />
+            <BuilderInlinePanel {...{ draftMenu, saveMenu, isSaving, setShowBuilder, saveStatus, updateDraft, menuTemplates, selectedTemplateId, loadTemplate, addSection, updateSectionField, removeSection, removeSubcategory, addSubcategory, updateSubcategoryTitle, restaurantSettings, currencySymbol, restaurantId, updateSectionList, isSupabaseConfigured, uploadMenuItemImage, initialTab: builderInitialTab, setDraftMenu }} />
           </div>
         ) : (
           <>

@@ -1,4 +1,4 @@
-import { IconPlus, IconEdit, IconEye, IconTrash } from '../Icons'
+import { IconPlus, IconEdit, IconEye, IconTrash, IconCode } from '../Icons'
 
 export default function MyMenuScreen({
   savedMenus,
@@ -18,9 +18,20 @@ export default function MyMenuScreen({
           <p className="text-xs font-semibold uppercase tracking-widest text-neutral-500">My Menu</p>
           <h2 className="mt-1 text-2xl font-bold text-neutral-900">Saved Menus</h2>
         </div>
-        <button onClick={openNewMenuBuilder} className="btn-green flex items-center gap-2">
-          <IconPlus /> Create New Menu
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => openNewMenuBuilder('json')}
+            className="btn-ghost flex items-center gap-1.5 text-xs py-2 px-3.5 border border-neutral-200 bg-white hover:border-green-400 hover:text-green-700 transition"
+          >
+            <IconCode /> Import JSON
+          </button>
+          <button
+            onClick={() => openNewMenuBuilder('items')}
+            className="btn-green flex items-center gap-1.5 text-xs py-2 px-3.5"
+          >
+            <IconPlus /> Create New Menu
+          </button>
+        </div>
       </div>
 
       {savedMenus.length === 0 ? (
