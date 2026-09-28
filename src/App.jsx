@@ -2091,6 +2091,7 @@ function Editor() {
               profile={profile}
               restaurantSettings={restaurantSettings}
               setActiveSection={setActiveSection}
+              restaurantId={restaurantId}
             />}
             {activeSection === 'inventory' && restaurantSettings?.enableBarInventory && <InventoryScreen
               profile={profile}
@@ -2139,7 +2140,7 @@ function Editor() {
               rooms={rooms}
               handleToggleRoomOrdering={handleToggleRoomOrdering}
               handleSaveRooms={handleSaveRooms}
-              handleUpdateBackupDatabase={handleUpdateBackupDatabase}
+              restaurantId={restaurantId}
               waiterCodes={waiterCodes}
               isWaiterCodesLoading={isWaiterCodesLoading}
               isWaiterCodesUpdating={isWaiterCodesUpdating}

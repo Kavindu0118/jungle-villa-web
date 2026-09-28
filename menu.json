@@ -1,0 +1,1574 @@
+[
+    {
+        "items": [],
+        "id": "sec_1_1783950820820",
+        "title": "Breakfast",
+        "subcategories": [
+            {
+                "title": "Avocado Toast",
+                "items": [
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783670794425-82875",
+                        "price": "500.00",
+                        "name": "Classic Avocado Toast",
+                        "description": ""
+                    },
+                    {
+                        "name": "Green Avocado Toast",
+                        "id": "item-1783671211505-31524",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "600.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "name": "Piggy Avocado Toast",
+                        "id": "item-1783671299969-96697",
+                        "description": "",
+                        "price": "700.00",
+                        "imageUrl": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "name": "Water Spinach Avocado Toast",
+                        "price": "700.00",
+                        "description": "",
+                        "id": "item-1783671257424-18851",
+                        "cost": "0.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "description": "",
+                        "name": "Yellow Avocado Toast",
+                        "id": "item-1783671235435-55565",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "cost": "0.00"
+                    }
+                ],
+                "id": "sub_2_1_1783950820821"
+            },
+            {
+                "id": "sub_2_2_1783950820821",
+                "title": "Coconut roti",
+                "items": [
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "id": "item-1783672072545-53365",
+                        "name": "Roti with Beef Curry"
+                    },
+                    {
+                        "price": "500.00",
+                        "name": "Roti with Coconut Sambol & Marmite",
+                        "imageUrl": "",
+                        "id": "item-1783672001421-98915",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "name": "Roti with Dhal Curry",
+                        "id": "item-1783672035599-12534",
+                        "imageUrl": "",
+                        "price": "500.00"
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "name": "Roti with Pork Curry",
+                        "id": "item-1783672054535-74237"
+                    },
+                    {
+                        "name": "Roti with Sambol and Butter",
+                        "id": "item-1783671119201-58746",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "400.00",
+                        "cost": "0.00"
+                    }
+                ]
+            },
+            {
+                "id": "sub_2_3_1783950820821",
+                "title": "Oatmeal Porridge",
+                "items": [
+                    {
+                        "id": "item-1783671551313-81016",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "name": "Avocado Porridge",
+                        "description": ""
+                    },
+                    {
+                        "price": "500.00",
+                        "description": "",
+                        "name": "Banana Porridge",
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "id": "item-1783671066400-31510"
+                    },
+                    {
+                        "price": "700.00",
+                        "imageUrl": "",
+                        "name": "Chocolate Porridge",
+                        "description": "",
+                        "cost": "0.00",
+                        "id": "item-1783671591793-70165"
+                    },
+                    {
+                        "id": "item-1783671574092-88337",
+                        "cost": "0.00",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "name": "Coconut Porridge"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783671612769-8230",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "700.00",
+                        "name": "Peanut Butter Porridge"
+                    }
+                ]
+            },
+            {
+                "items": [
+                    {
+                        "description": "",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "price": "500.00",
+                        "name": "Banana Sago",
+                        "id": "item-1783672151317-98681"
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "id": "item-1783672184815-14475",
+                        "imageUrl": "",
+                        "name": "Chocolate Sago",
+                        "price": "600.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "id": "item-1783672167617-75208",
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "description": "",
+                        "name": "Mango Sago"
+                    },
+                    {
+                        "description": "",
+                        "name": "Plain Sago",
+                        "imageUrl": "",
+                        "id": "item-1783671134173-150",
+                        "price": "400.00",
+                        "cost": "0.00"
+                    }
+                ],
+                "title": "Sago",
+                "id": "sub_2_4_1783950820821"
+            },
+            {
+                "title": "Special",
+                "id": "sub_2_5_1783950820821",
+                "items": [
+                    {
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "600.00",
+                        "id": "item-1783672285091-34906",
+                        "name": "Avocado Salad"
+                    },
+                    {
+                        "imageUrl": "",
+                        "name": "English Breakfast",
+                        "description": "",
+                        "price": "1000.00",
+                        "cost": "0.00",
+                        "id": "item-1783671141747-34146"
+                    },
+                    {
+                        "price": "800.00",
+                        "description": "",
+                        "id": "item-1783672301482-90441",
+                        "name": "Fruit Platter",
+                        "cost": "0.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "id": "item-1783672259458-75906",
+                        "name": "Toasted Bread"
+                    }
+                ]
+            },
+            {
+                "title": "String Hoppers",
+                "items": [
+                    {
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "id": "item-1783671887985-88167",
+                        "price": "200.00",
+                        "description": "",
+                        "name": "Coconut Sambol"
+                    },
+                    {
+                        "name": "String Hoppers with Chicken Curry",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "description": "",
+                        "id": "item-1783671836825-20364",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783671108709-49493",
+                        "imageUrl": "",
+                        "name": "String Hoppers with Dhal Curry",
+                        "description": "",
+                        "price": "500.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "550.00",
+                        "name": "String Hoppers with Egg Cuury",
+                        "id": "item-1783671804228-42428"
+                    },
+                    {
+                        "id": "item-1783671863771-80300",
+                        "imageUrl": "",
+                        "name": "S/Hoppers Beef",
+                        "price": "700.00",
+                        "description": ""
+                    }
+                ],
+                "id": "sub_2_6_1783950820821"
+            }
+        ]
+    },
+    {
+        "items": [],
+        "id": "sec_2_1783950820821",
+        "subcategories": [
+            {
+                "items": [
+                    {
+                        "name": "Affogato",
+                        "price": "600.00",
+                        "description": "",
+                        "imageUrl": "",
+                        "id": "item-1783686769444-88785",
+                        "cost": "0.00"
+                    },
+                    {
+                        "description": "",
+                        "price": "500.00",
+                        "cost": "0.00",
+                        "name": "Americano Hot",
+                        "imageUrl": "",
+                        "id": "item-1783686499123-37971"
+                    },
+                    {
+                        "price": "550.00",
+                        "description": "",
+                        "name": "Americano Iced",
+                        "id": "item-1783686518859-40571",
+                        "cost": "0.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "description": "",
+                        "id": "item-1783686642571-7254",
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "name": "Cafe Latte Hot",
+                        "price": "600.00"
+                    },
+                    {
+                        "id": "item-1783686660798-89686",
+                        "description": "",
+                        "price": "700.00",
+                        "imageUrl": "",
+                        "name": "Cafe Latte Iced",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783686585931-67790",
+                        "description": "",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "name": "Cappuccino Hot"
+                    },
+                    {
+                        "description": "",
+                        "id": "item-1783686608433-15046",
+                        "cost": "0.00",
+                        "price": "700.00",
+                        "name": "Cappuccino Iced",
+                        "imageUrl": ""
+                    },
+                    {
+                        "name": "Chai Latte Hot",
+                        "imageUrl": "",
+                        "price": "500.00",
+                        "cost": "0.00",
+                        "description": "",
+                        "id": "item-1783686712632-55393"
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "id": "item-1783686750699-95590",
+                        "description": "",
+                        "name": "Chai Latte Iced",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "400.00",
+                        "name": "Espresso Hot",
+                        "id": "item-1783670978378-82365",
+                        "description": "",
+                        "imageUrl": ""
+                    },
+                    {
+                        "imageUrl": "",
+                        "name": "Espresso Iced",
+                        "price": "450.00",
+                        "description": "",
+                        "id": "item-1783686445449-47547",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783686547983-11259",
+                        "name": "Espresso Tonic",
+                        "description": "",
+                        "price": "700.00"
+                    },
+                    {
+                        "name": "Flat White",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "id": "item-1783686629611-6058",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "name": "Hot Milk ",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "300.00",
+                        "id": "item-1783686816365-8040",
+                        "cost": "0.00"
+                    },
+                    {
+                        "name": "Lungo",
+                        "price": "500.00",
+                        "imageUrl": "",
+                        "id": "item-1783686477616-6523",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "price": "500.00",
+                        "imageUrl": "",
+                        "id": "item-1783686572427-84868",
+                        "name": "Macchiato"
+                    },
+                    {
+                        "id": "item-1783686675531-49964",
+                        "name": "Matcha Latte Hot",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "id": "item-1783686694937-93290",
+                        "cost": "0.00",
+                        "price": "700.00",
+                        "name": "Matcha Latte Iced",
+                        "description": ""
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "id": "item-1783686784790-47471",
+                        "name": "Mocha Hot",
+                        "price": "700.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "name": "Mocha Iced",
+                        "description": "",
+                        "id": "item-1783686803777-95200",
+                        "price": "800.00",
+                        "cost": "0.00"
+                    }
+                ],
+                "title": "Coffee",
+                "id": "sub_3_1_1783950820822"
+            },
+            {
+                "title": "Extra",
+                "id": "sub_3_2_1783950820822",
+                "items": [
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "200.00",
+                        "id": "item-1783687761115-71328",
+                        "name": "Chocolate",
+                        "imageUrl": ""
+                    },
+                    {
+                        "name": "Cinnamon",
+                        "price": "100.00",
+                        "description": "",
+                        "id": "item-1783687783684-82711",
+                        "imageUrl": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "200.00",
+                        "id": "item-1783687717170-58326",
+                        "description": "",
+                        "name": "Coconut Milk",
+                        "imageUrl": ""
+                    },
+                    {
+                        "description": "",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783687699058-91626",
+                        "price": "200.00",
+                        "name": "Cow Milk"
+                    },
+                    {
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "id": "item-1783687662538-24131",
+                        "description": "",
+                        "price": "300.00",
+                        "name": "Extra Shot"
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "100.00",
+                        "imageUrl": "",
+                        "id": "item-1783687743993-66795",
+                        "name": "Honey",
+                        "description": ""
+                    }
+                ]
+            },
+            {
+                "items": [
+                    {
+                        "imageUrl": "",
+                        "id": "item-1783686384640-82587",
+                        "cost": "0.00",
+                        "price": "300.00",
+                        "name": "Black Tea Hot",
+                        "description": ""
+                    },
+                    {
+                        "imageUrl": "",
+                        "name": "Black Tea Iced",
+                        "id": "item-1783686893668-38372",
+                        "description": "",
+                        "price": "350.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "price": "350.00",
+                        "name": "Blue Tea Hot ",
+                        "imageUrl": "",
+                        "description": "",
+                        "cost": "0.00",
+                        "id": "item-1783687150992-77710"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "name": "Blue Tea Iced",
+                        "id": "item-1783687171887-66319",
+                        "description": "",
+                        "price": "400.00"
+                    },
+                    {
+                        "description": "",
+                        "name": "Chai Masala Black Tea Hot",
+                        "price": "350.00",
+                        "id": "item-1783687194873-85322",
+                        "cost": "0.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "name": "Chai Masala Black Tea Iced",
+                        "description": "",
+                        "id": "item-1783687226779-17344",
+                        "imageUrl": "",
+                        "price": "400.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "id": "item-1783687032349-30366",
+                        "name": "Cinnamon Tea",
+                        "price": "350.00",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "description": "",
+                        "id": "item-1783687055725-19816",
+                        "name": "Ginger Honey Tea Hot",
+                        "price": "350.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "price": "400.00",
+                        "imageUrl": "",
+                        "name": "Ginger Honey Tea Iced",
+                        "description": "",
+                        "id": "item-1783687074114-43065",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783686952304-57761",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "300.00",
+                        "name": "Green Tea"
+                    },
+                    {
+                        "name": "Herbal Tea",
+                        "price": "350.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "id": "item-1783686969053-76477",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "name": "Lime Tea Hot",
+                        "description": "",
+                        "id": "item-1783687106731-85095",
+                        "price": "350.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "price": "400.00",
+                        "imageUrl": "",
+                        "id": "item-1783687135506-58149",
+                        "name": "Lime Tea Iced",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "imageUrl": "",
+                        "description": "",
+                        "name": "Mint Tea Hot ",
+                        "price": "350.00",
+                        "id": "item-1783687258367-26940",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783687274915-40291",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "400.00",
+                        "name": "Mint Tea Iced"
+                    },
+                    {
+                        "price": "350.00",
+                        "imageUrl": "",
+                        "id": "item-1783687289544-15406",
+                        "name": "Strawberry Flavoured Tea Hot",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "id": "item-1783687318916-69763",
+                        "price": "400.00",
+                        "imageUrl": "",
+                        "name": "Strawberry Flavoured Tea Iced"
+                    },
+                    {
+                        "description": "",
+                        "price": "350.00",
+                        "name": "Vanilla Flavoured Tea Hot",
+                        "id": "item-1783687338717-50461",
+                        "imageUrl": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "price": "0.00",
+                        "description": "",
+                        "name": "Vanilla Flavoured Tea Iced",
+                        "id": "item-1783687366187-67078"
+                    }
+                ],
+                "id": "sub_3_3_1783950820822",
+                "title": "Tea"
+            }
+        ],
+        "title": "Coffee & Tea"
+    },
+    {
+        "title": "Desserts",
+        "subcategories": [
+            {
+                "title": "Ice Cream",
+                "id": "sub_4_1_1783950820822",
+                "items": [
+                    {
+                        "description": "",
+                        "name": "Blueberry Ice Cream",
+                        "id": "item-1783685017262-41076",
+                        "cost": "0.00",
+                        "price": "400.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "400.00",
+                        "description": "",
+                        "name": "Chocolate Ice Cream",
+                        "imageUrl": "",
+                        "id": "item-1783684859204-41656"
+                    },
+                    {
+                        "id": "item-1783685043391-74393",
+                        "cost": "0.00",
+                        "price": "500.00",
+                        "imageUrl": "",
+                        "name": "Coconut Ice Cream",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "500.00",
+                        "id": "item-1783685084740-19569",
+                        "name": "Curd with Treacle",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783685059795-99848",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "name": "Fruit Salad with Ice Cream"
+                    },
+                    {
+                        "name": "Jack Fruit Ice Cream",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "800.00",
+                        "cost": "400.00",
+                        "id": "item_1783950479221460_182"
+                    },
+                    {
+                        "id": "item-1783685004934-93144",
+                        "imageUrl": "",
+                        "name": "Strawberry Ice Cream",
+                        "cost": "0.00",
+                        "price": "400.00",
+                        "description": ""
+                    },
+                    {
+                        "id": "item-1783683625761-44040",
+                        "name": "Vanilla Ice Cream",
+                        "price": "350.00",
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "description": ""
+                    }
+                ]
+            },
+            {
+                "title": "Pancakes",
+                "items": [
+                    {
+                        "price": "600.00",
+                        "name": "Banana Pancakes with Chocolate",
+                        "id": "item-1783683826722-73709",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "price": "500.00",
+                        "name": "Banana Pancakes with Honey",
+                        "id": "item-1783670951721-58283",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "name": "Banana Pancakes with Milkmaid",
+                        "price": "600.00",
+                        "id": "item-1783683884713-59533",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "id": "item-1783683851263-70207",
+                        "name": "Banana Pancakes with Strawberry",
+                        "description": ""
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "id": "item-1783683909572-55013",
+                        "name": "Fruity Pancakes with Honey",
+                        "price": "700.00",
+                        "imageUrl": ""
+                    }
+                ],
+                "id": "sub_4_2_1783950820822"
+            },
+            {
+                "title": "Waffles",
+                "items": [
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "id": "item-1783684691609-82116",
+                        "price": "600.00",
+                        "name": "Waffles with Chocolate"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "name": "Waffles with Honey",
+                        "id": "item-1783683407522-11370",
+                        "price": "500.00",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783684774433-75828",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "600.00",
+                        "name": "Waffles with Milkmaid"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783684715879-9299",
+                        "description": "",
+                        "name": "Waffles with Strawberry Syrup",
+                        "imageUrl": "",
+                        "price": "600.00"
+                    }
+                ],
+                "id": "sub_4_3_1783950820822"
+            }
+        ],
+        "items": [],
+        "id": "sec_3_1783950820822"
+    },
+    {
+        "subcategories": [
+            {
+                "items": [
+                    {
+                        "description": "",
+                        "imageUrl": "",
+                        "name": "weekly discount",
+                        "price": "10.00",
+                        "id": "item_1783950820822533_523",
+                        "cost": "0.00"
+                    }
+                ],
+                "id": "sub_5_1_1783950820822",
+                "title": "percentage"
+            }
+        ],
+        "id": "sec_4_1783950820822",
+        "title": "Discounts",
+        "items": []
+    },
+    {
+        "title": "Drinks",
+        "id": "sec_5_1783950820822",
+        "items": [],
+        "subcategories": [
+            {
+                "title": "Custom Drinks",
+                "items": [
+                    {
+                        "id": "item-1783685227110-1982",
+                        "name": "Your Custom Drink",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "900.00"
+                    }
+                ],
+                "id": "sub_6_1_1783950820822"
+            },
+            {
+                "title": "Fresh Juices",
+                "id": "sub_6_2_1783950820822",
+                "items": [
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783685314865-62181",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "name": "Avocado Fresh Juice"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783685426115-29291",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "400.00",
+                        "name": "Beet Root "
+                    },
+                    {
+                        "description": "",
+                        "name": "Carrot Fresh Juice",
+                        "price": "400.00",
+                        "cost": "0.00",
+                        "id": "item-1783685411470-7714",
+                        "imageUrl": ""
+                    },
+                    {
+                        "id": "item-1783685388175-77642",
+                        "imageUrl": "",
+                        "name": "Lime Fresh Juice",
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "400.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "description": "",
+                        "id": "item-1783670967170-87169",
+                        "name": "Mango Fresh Juice",
+                        "cost": "0.00",
+                        "price": "600.00"
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "id": "item-1783685338041-95666",
+                        "name": "Papaya Fresh Juice",
+                        "imageUrl": "",
+                        "price": "500.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783685366028-199",
+                        "name": "Passion Fruit Fresh Juice",
+                        "description": "",
+                        "price": "500.00"
+                    },
+                    {
+                        "id": "item-1783685266789-4676",
+                        "name": "Pineapple Fresh Juice",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "id": "item-1783685297540-35651",
+                        "price": "500.00",
+                        "imageUrl": "",
+                        "name": "Watermelon Fresh Juice"
+                    }
+                ]
+            },
+            {
+                "id": "sub_6_3_1783950820822",
+                "title": "Lassi",
+                "items": [
+                    {
+                        "price": "700.00",
+                        "name": "Avocado Lassi",
+                        "imageUrl": "",
+                        "id": "item-1783685969230-46876",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": "",
+                        "name": "Banana Lassi",
+                        "id": "item-1783685953441-41551",
+                        "price": "600.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783685206739-48643",
+                        "price": "700.00",
+                        "name": "Mango Lassi",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783686046882-9180",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "800.00",
+                        "name": "Mixed Fruit Lassi"
+                    },
+                    {
+                        "description": "",
+                        "imageUrl": "",
+                        "id": "item-1783686001805-46013",
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "name": "Papaya Lassi"
+                    },
+                    {
+                        "id": "item-1783685984443-87440",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": "",
+                        "name": "Passon Fruit Lassi",
+                        "price": "600.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783686029352-44465",
+                        "price": "500.00",
+                        "description": "",
+                        "name": "Plain Lassi",
+                        "imageUrl": ""
+                    }
+                ]
+            },
+            {
+                "title": "Milkshakes",
+                "id": "sub_6_4_1783950820822",
+                "items": [
+                    {
+                        "id": "item-1783685645992-95950",
+                        "name": "Avocado Milkshake",
+                        "price": "700.00",
+                        "description": "",
+                        "imageUrl": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "description": "",
+                        "id": "item-1783685800212-34384",
+                        "name": "Banana Milkshake",
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "price": "700.00",
+                        "id": "item-1783685840432-71300",
+                        "imageUrl": "",
+                        "name": "Chocolate Milkshake",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "name": "Coffee Milkshake",
+                        "description": "",
+                        "imageUrl": "",
+                        "id": "item-1783685861096-26326",
+                        "price": "700.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "name": "Mango Milkshake",
+                        "price": "700.00",
+                        "id": "item-1783685177258-84317",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "id": "item-1783685783874-54031",
+                        "description": "",
+                        "name": "Papaya Milkshake"
+                    },
+                    {
+                        "name": "Peanut Butter Milkshake",
+                        "description": "",
+                        "price": "800.00",
+                        "imageUrl": "",
+                        "id": "item-1783685887012-55880",
+                        "cost": "0.00"
+                    },
+                    {
+                        "id": "item-1783685606172-58541",
+                        "name": "Pineapple milkshake",
+                        "imageUrl": "",
+                        "price": "700.00",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783685822719-18495",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "name": "Vanilla Milkshake",
+                        "description": ""
+                    },
+                    {
+                        "name": "Watermelon Milkshake",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "600.00",
+                        "id": "item-1783685624856-15788",
+                        "cost": "0.00"
+                    }
+                ]
+            },
+            {
+                "items": [
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "id": "item-1783685215282-33403",
+                        "price": "200.00",
+                        "name": "Bottled Water"
+                    },
+                    {
+                        "price": "300.00",
+                        "id": "item-1783686168380-30598",
+                        "imageUrl": "",
+                        "name": "Coca Cola Zero",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "description": "",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "name": "Coconut",
+                        "price": "300.00",
+                        "id": "item-1783686247428-84769"
+                    },
+                    {
+                        "name": "Ginger Beer",
+                        "price": "300.00",
+                        "id": "item-1783686233321-64317",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "300.00",
+                        "name": "Soda",
+                        "id": "item-1783686220257-4101",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "300.00",
+                        "name": "Sprite",
+                        "id": "item-1783686196776-73419"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783686204922-54246",
+                        "description": "",
+                        "price": "300.00",
+                        "name": "Tonic"
+                    }
+                ],
+                "id": "sub_6_5_1783950820822",
+                "title": "Others"
+            }
+        ]
+    },
+    {
+        "items": [],
+        "title": "Noodles",
+        "subcategories": [
+            {
+                "items": [
+                    {
+                        "description": "",
+                        "name": "Chicken Macaroni",
+                        "imageUrl": "",
+                        "id": "item-1783682755680-55198",
+                        "price": "800.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "price": "700.00",
+                        "name": "Egg Macaroni",
+                        "imageUrl": "",
+                        "description": "",
+                        "cost": "0.00",
+                        "id": "item-1783682741872-2216"
+                    },
+                    {
+                        "price": "900.00",
+                        "name": "Pork or Beef Macaroni",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783682774490-84695",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "600.00",
+                        "id": "item-1783682590972-53836",
+                        "imageUrl": "",
+                        "name": "Vegetable Macaroni"
+                    }
+                ],
+                "id": "sub_7_1_1783950820823",
+                "title": "Macaroni"
+            },
+            {
+                "title": "Noodles",
+                "id": "sub_7_2_1783950820823",
+                "items": [
+                    {
+                        "id": "item-1783683228133-20335",
+                        "imageUrl": "",
+                        "name": "Chicken Noodles",
+                        "description": "",
+                        "price": "800.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "description": "",
+                        "id": "item-1783683215763-45621",
+                        "name": "Egg Noodles",
+                        "cost": "0.00",
+                        "price": "700.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "900.00",
+                        "imageUrl": "",
+                        "name": "Pork or Beef Noodles",
+                        "id": "item-1783683252232-30096"
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "name": "Vegetable Noodles",
+                        "id": "item-1783682620639-64278"
+                    }
+                ]
+            },
+            {
+                "items": [
+                    {
+                        "name": "Cheese Pasta",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "800.00",
+                        "cost": "0.00",
+                        "id": "item-1783683129821-73706"
+                    },
+                    {
+                        "name": "Egg Pasta",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "700.00",
+                        "id": "item-1783683148801-85992",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": "",
+                        "id": "item-1783683150774-86827",
+                        "name": "Pork or Beef Pasta",
+                        "price": "900.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783682612100-69277",
+                        "imageUrl": "",
+                        "price": "600.00",
+                        "description": "",
+                        "name": "Vegetable Pasta"
+                    }
+                ],
+                "title": "Pasta",
+                "id": "sub_7_3_1783950820823"
+            },
+            {
+                "items": [
+                    {
+                        "name": "Chicken Ramen",
+                        "description": "",
+                        "price": "900.00",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783682671121-51142"
+                    },
+                    {
+                        "price": "800.00",
+                        "cost": "0.00",
+                        "id": "item-1783682659082-85471",
+                        "name": "Egg Ramen",
+                        "description": "",
+                        "imageUrl": ""
+                    },
+                    {
+                        "name": "Pork or Beef Ramen",
+                        "price": "1000.00",
+                        "id": "item-1783682691121-83575",
+                        "description": "",
+                        "cost": "0.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "price": "700.00",
+                        "id": "item-1783670932979-92628",
+                        "name": "Vegetable Ramen",
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "description": ""
+                    }
+                ],
+                "title": "Ramen",
+                "id": "sub_7_4_1783950820823"
+            },
+            {
+                "items": [
+                    {
+                        "name": "Chicken Spaghetti",
+                        "imageUrl": "",
+                        "description": "",
+                        "price": "900.00",
+                        "id": "item-1783683321541-23870",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "description": "",
+                        "id": "item-1783683304702-52325",
+                        "name": "Egg Spaghett",
+                        "cost": "0.00",
+                        "price": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "1000.00",
+                        "name": "Pork or Beef Spaghetti",
+                        "id": "item-1783683342902-7133"
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "700.00",
+                        "id": "item-1783682627933-18119",
+                        "name": "Vegetable Spaghetti",
+                        "description": "",
+                        "imageUrl": ""
+                    }
+                ],
+                "id": "sub_7_5_1783950820823",
+                "title": "Spaghetti"
+            }
+        ],
+        "id": "sec_6_1783950820822"
+    },
+    {
+        "id": "sec_7_1783950820823",
+        "title": "Omelette & Pizza",
+        "subcategories": [
+            {
+                "title": "Extra",
+                "id": "sub_8_1_1783950820823",
+                "items": [
+                    {
+                        "id": "item-1783675256966-70780",
+                        "price": "250.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "name": "Avocado",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "name": "Bacon",
+                        "price": "350.00",
+                        "id": "item-1783675170086-64924",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "name": "Cheese ",
+                        "imageUrl": "",
+                        "id": "item-1783675240184-37878",
+                        "price": "300.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "price": "300.00",
+                        "description": "",
+                        "id": "item-1783675194354-2524",
+                        "imageUrl": "",
+                        "name": "Chicken"
+                    },
+                    {
+                        "description": "",
+                        "name": "Egg",
+                        "imageUrl": "",
+                        "price": "150.00",
+                        "cost": "0.00",
+                        "id": "item-1783675273014-79250"
+                    },
+                    {
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "price": "200.00",
+                        "id": "item-1783675214645-68202",
+                        "name": "Mushroom",
+                        "description": ""
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "name": "Suasage",
+                        "id": "item-1783675229879-95630",
+                        "imageUrl": "",
+                        "price": "200.00"
+                    }
+                ]
+            },
+            {
+                "title": "Omelette",
+                "id": "sub_8_2_1783950820823",
+                "items": [
+                    {
+                        "id": "item-1783674345202-15889",
+                        "name": "All ingredients Omelette",
+                        "price": "800.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "description": "",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "price": "350.00",
+                        "id": "item-1783673993754-77358",
+                        "name": "Boiled Eggs"
+                    },
+                    {
+                        "description": "",
+                        "cost": "0.00",
+                        "price": "500.00",
+                        "name": "Cheese Omelette",
+                        "id": "item-1783674056980-85093",
+                        "imageUrl": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "id": "item-1783674099691-55121",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "name": "Cheese, Chilli, Chicken, Onion Omelette"
+                    },
+                    {
+                        "price": "0.00",
+                        "name": "Cheese, Mushroom, Onion, Garlic Omelette",
+                        "description": "",
+                        "id": "item-1783674211376-28018",
+                        "cost": "0.00",
+                        "imageUrl": ""
+                    },
+                    {
+                        "price": "65.00",
+                        "name": "Cheese, Tomato, Avocado, Onion Omelette",
+                        "description": "",
+                        "id": "item-1783674181988-44798",
+                        "imageUrl": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "description": "",
+                        "name": "Cheese, Tomato, Bacon, Onion, Omelette",
+                        "imageUrl": "",
+                        "id": "item-1783674146838-87059",
+                        "price": "650.00",
+                        "cost": "0.00"
+                    },
+                    {
+                        "id": "item-1783674294033-78730",
+                        "imageUrl": "",
+                        "name": "Cheese, Tomato, Basil Omelette",
+                        "cost": "0.00",
+                        "price": "550.00",
+                        "description": ""
+                    },
+                    {
+                        "cost": "0.00",
+                        "imageUrl": "",
+                        "id": "item-1783674239940-74490",
+                        "description": "",
+                        "price": "600.00",
+                        "name": "Cheese, Tomato, Suasage, Green Onion Omelette"
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "id": "item-1783670889596-54095",
+                        "imageUrl": "",
+                        "name": "Fried Eggs",
+                        "price": "300.00"
+                    },
+                    {
+                        "price": "400.00",
+                        "name": "Plain Omelette",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": "",
+                        "id": "item-1783674044907-97421"
+                    },
+                    {
+                        "description": "",
+                        "name": "Poached Eggs",
+                        "imageUrl": "",
+                        "price": "350.00",
+                        "id": "item-1783673979017-29529",
+                        "cost": "0.00"
+                    },
+                    {
+                        "id": "item-1783674014873-90338",
+                        "name": "Scramble Eggs",
+                        "price": "500.00",
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "description": ""
+                    },
+                    {
+                        "id": "item-1783674333069-56886",
+                        "name": "Sri Lanka Omelette",
+                        "price": "600.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "cost": "0.00"
+                    },
+                    {
+                        "imageUrl": "",
+                        "cost": "0.00",
+                        "id": "item-1783674077868-97",
+                        "price": "550.00",
+                        "description": "",
+                        "name": "Vegetable Omelette"
+                    }
+                ]
+            },
+            {
+                "id": "sub_8_3_1783950820823",
+                "title": "Pizza",
+                "items": [
+                    {
+                        "id": "item-1783675084579-86350",
+                        "name": "Chilli Chicken Suasage Pizza",
+                        "price": "1800.00",
+                        "cost": "0.00",
+                        "description": "",
+                        "imageUrl": ""
+                    },
+                    {
+                        "name": "Hawain Pizza",
+                        "price": "1800.00",
+                        "imageUrl": "",
+                        "description": "",
+                        "id": "item-1783675146888-39733",
+                        "cost": "0.00"
+                    },
+                    {
+                        "cost": "0.00",
+                        "description": "",
+                        "price": "1200.00",
+                        "imageUrl": "",
+                        "name": "Margherita",
+                        "id": "item-1783673947973-36318"
+                    },
+                    {
+                        "name": "Veggie Pizza",
+                        "imageUrl": "",
+                        "price": "1500.00",
+                        "description": "",
+                        "id": "item-1783675061490-81753",
+                        "cost": "0.00"
+                    }
+                ]
+            }
+        ],
+        "items": []
+    }
+]

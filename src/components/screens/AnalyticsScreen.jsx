@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { initializeApp, getApps } from 'firebase/app'
-import { getFirestore, collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs } from 'firebase/firestore'
+import { db } from '../../lib/firebase'
 import { IconAnalytics, IconDownload, IconFileText, IconPrinter, IconSearch } from '../Icons'
 
-export default function AnalyticsScreen({ profile, restaurantSettings, setActiveSection }) {
+export default function AnalyticsScreen({ profile, restaurantSettings, setActiveSection, restaurantId }) {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -74,10 +74,10 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
   }
 
   const isConfigured = useMemo(() => {
-    return !!(profile?.backupDatabase?.apiKey && profile?.backupDatabase?.projectId && profile?.backupDatabase?.appId)
-  }, [profile?.backupDatabase])
+    return !!restaurantId && !!db
+  }, [restaurantId])
 
-  // Fetch orders from backup database
+  // Fetch orders from backups/{restaurantId}/ in the primary Firestore DB
   useEffect(() => {
     if (!isConfigured) return
 
@@ -86,27 +86,7 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
       setLoading(true)
       setError(null)
       try {
-        const config = {
-          apiKey: profile.backupDatabase.apiKey,
-          authDomain: profile.backupDatabase.authDomain || `${profile.backupDatabase.projectId}.firebaseapp.com`,
-          projectId: profile.backupDatabase.projectId,
-          storageBucket: profile.backupDatabase.storageBucket || `${profile.backupDatabase.projectId}.appspot.com`,
-          messagingSenderId: profile.backupDatabase.messagingSenderId,
-          appId: profile.backupDatabase.appId,
-        }
-
-        const appName = 'backup_analytics_db'
-        let secondaryApp
-        const apps = getApps()
-        const existingApp = apps.find((app) => app.name === appName)
-        if (existingApp) {
-          secondaryApp = existingApp
-        } else {
-          secondaryApp = initializeApp(config, appName)
-        }
-
-        const secondaryDb = getFirestore(secondaryApp)
-        const ordersRef = collection(secondaryDb, 'orders')
+        const ordersRef = collection(db, 'backups', restaurantId, 'orders')
         const querySnapshot = await getDocs(ordersRef)
 
         const fetchedOrders = []
@@ -122,9 +102,9 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
           setOrders(fetchedOrders)
         }
       } catch (err) {
-        console.error('Error fetching backup database orders:', err)
+        console.error('Error fetching backup orders:', err)
         if (active) {
-          setError(err.message || 'Could not connect to the cloud backup database. Please check your credentials in Settings.')
+          setError(err.message || 'Could not fetch backup data. Check Firestore rules for backups collection.')
         }
       } finally {
         if (active) {
@@ -138,7 +118,7 @@ export default function AnalyticsScreen({ profile, restaurantSettings, setActive
     return () => {
       active = false
     }
-  }, [isConfigured, profile?.backupDatabase])
+  }, [isConfigured, restaurantId])
 
   // Filter orders by selected date range
   const filteredOrders = useMemo(() => {
